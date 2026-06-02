@@ -2,11 +2,20 @@
 
 import React, { useEffect, useRef } from "react";
 import { useSimulationStore } from "@/store/useSimulationStore";
-import { Play, Pause, RotateCcw, FastForward } from "lucide-react";
+import { Play, Pause, RotateCcw, FastForward, Dumbbell } from "lucide-react";
 
 export default function PlaybackControls() {
-  const { progress, isPlaying, speed, setProgress, setIsPlaying, setSpeed, reset } =
-    useSimulationStore();
+  const {
+    progress,
+    isPlaying,
+    speed,
+    weight,
+    setProgress,
+    setIsPlaying,
+    setSpeed,
+    setWeight,
+    reset,
+  } = useSimulationStore();
 
   const animationRef = useRef<number | null>(null);
   const directionRef = useRef<number>(1); // 1 = down (0 to 100), -1 = up (100 to 0)
@@ -115,48 +124,71 @@ export default function PlaybackControls() {
         </div>
       </div>
 
-      {/* Control Buttons and Speed Panel */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2 border-t border-zinc-800/60">
+      {/* Control Buttons, Weight Selector and Speed Panel */}
+      <div className="flex flex-col xl:flex-row items-center justify-between gap-4 pt-4 border-t border-zinc-800/60">
         
         {/* Playback Buttons */}
-        <div className="flex items-center gap-2">
-          {/* Play/Pause Button */}
-          <button
-            onClick={togglePlay}
-            className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide uppercase transition-all duration-200 cursor-pointer shadow-md select-none border ${
-              isPlaying
-                ? "bg-zinc-800 text-zinc-100 hover:bg-zinc-700/80 border-zinc-700 hover:border-zinc-600"
-                : "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.03] active:scale-[0.98] border-blue-500 hover:shadow-blue-500/10"
-            }`}
-          >
-            {isPlaying ? (
-              <>
-                <Pause className="w-4 h-4" />
-                Pausar
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 fill-white" />
-                Simular
-              </>
-            )}
-          </button>
+        <div className="flex items-center gap-2 w-full xl:w-auto justify-between xl:justify-start">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={togglePlay}
+              className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide uppercase transition-all duration-200 cursor-pointer shadow-md select-none border ${
+                isPlaying
+                  ? "bg-zinc-800 text-zinc-100 hover:bg-zinc-700/80 border-zinc-700 hover:border-zinc-600"
+                  : "bg-blue-600 text-white hover:bg-blue-500 hover:scale-[1.03] active:scale-[0.98] border-blue-500 hover:shadow-blue-500/10"
+              }`}
+            >
+              {isPlaying ? (
+                <>
+                  <Pause className="w-4 h-4" />
+                  Pausar
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 fill-white" />
+                  Simular
+                </>
+              )}
+            </button>
 
-          {/* Reset Button */}
-          <button
-            onClick={() => {
-              reset();
-              directionRef.current = 1;
-            }}
-            className="flex items-center justify-center p-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-all duration-150 cursor-pointer"
-            title="Reiniciar Simulación"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
+            <button
+              onClick={() => {
+                reset();
+                directionRef.current = 1;
+              }}
+              className="flex items-center justify-center p-2.5 rounded-xl bg-zinc-950 hover:bg-zinc-850 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-all duration-150 cursor-pointer"
+              title="Reiniciar Simulación"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Dynamic Barbell Weight Plate Selector (Center item) */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 bg-zinc-950 p-2 rounded-xl border border-zinc-800/80 w-full xl:w-auto">
+          <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold pl-1.5 flex items-center gap-1.5">
+            <Dumbbell className="w-3.5 h-3.5 text-emerald-400" />
+            Carga: <strong className="text-zinc-200 font-mono text-xs font-black">{weight} kg</strong>
+          </span>
+          <div className="flex flex-wrap items-center gap-1">
+            {[20, 60, 80, 100, 120].map((w) => (
+              <button
+                key={w}
+                onClick={() => setWeight(w)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-black tracking-wide font-mono transition-all duration-150 cursor-pointer ${
+                  weight === w
+                    ? "bg-emerald-950 text-emerald-400 border border-emerald-800/80 shadow-md"
+                    : "text-zinc-500 hover:text-zinc-300 border border-transparent hover:bg-zinc-900/40"
+                }`}
+              >
+                {w === 20 ? "20k (Barra)" : `${w}k`}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Slow Motion Selector */}
-        <div className="flex items-center gap-2.5 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800/80">
+        <div className="flex items-center justify-between xl:justify-start gap-2.5 bg-zinc-950 p-1.5 rounded-xl border border-zinc-800/80 w-full xl:w-auto">
           <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold pl-2 flex items-center gap-1">
             <FastForward className="w-3 h-3 text-zinc-500" />
             Velocidad
@@ -169,7 +201,7 @@ export default function PlaybackControls() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-black tracking-wide font-mono transition-all duration-150 cursor-pointer ${
                   speed === s
                     ? "bg-blue-950 text-blue-400 border border-blue-800/80 shadow-md"
-                    : "text-zinc-500 hover:text-zinc-300 border border-transparent"
+                    : "text-zinc-500 hover:text-zinc-300 border border-transparent hover:bg-zinc-900/40"
                 }`}
               >
                 {s === 1.0 ? "1x" : s === 0.5 ? "0.5x" : "0.25x"}

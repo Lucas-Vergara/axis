@@ -1,14 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import { useSimulationStore } from "@/store/useSimulationStore";
 import { calculateBiomechanics, getMuscleColor } from "@/utils/biomechanics";
 
 export default function KinematicScene() {
   const progress = useSimulationStore((state) => state.progress);
-  
+  const weight = useSimulationStore((state) => state.weight);
+  const setProgress = useSimulationStore((state) => state.setProgress);
+  const isPlaying = useSimulationStore((state) => state.isPlaying);
+  const setIsPlaying = useSimulationStore((state) => state.setIsPlaying);
+
+  const svgRef = useRef<SVGSVGElement>(null);
+  const isDragging = useRef(false);
+
   // Calculate all biomechanical coordinates and angles
-  const metrics = calculateBiomechanics(progress);
+  const metrics = calculateBiomechanics(progress, weight);
   const {
     jointPositions: { shoulder, elbow, wrist, barbell },
     shoulderAngle,
@@ -18,7 +25,33 @@ export default function KinematicScene() {
     pectoralTension,
     tricepsTension,
     deltoidTension,
+    barbellForce,
   } = metrics;
+
+  // Drag handlers for direct screen scrubbing
+  const handleStart = (clientY: number) => {
+    isDragging.current = true;
+    if (isPlaying) {
+      setIsPlaying(false); // pause play to avoid conflicting updates
+    }
+    handleMove(clientY);
+  };
+
+  const handleMove = (clientY: number) => {
+    if (!isDragging.current || !svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    
+    // Scale clientY to SVG viewBox coordinates (viewBox height is 500)
+    const clickY = ((clientY - rect.top) / rect.height) * 500;
+    
+    // Map clickY (range 140 to 290) to progress (0 to 100)
+    const newProgress = ((clickY - 140) / (290 - 140)) * 100;
+    setProgress(Math.max(0, Math.min(100, newProgress)));
+  };
+
+  const handleEnd = () => {
+    isDragging.current = false;
+  };
 
   // Muscle color codes
   const pectoralColor = getMuscleColor(pectoralTension);
@@ -26,17 +59,14 @@ export default function KinematicScene() {
   const deltoidColor = getMuscleColor(deltoidTension);
 
   // Derive points for muscle geometry
-  // Pectoral Mayor: Sternum (on chest) to Humerus (upper arm mid)
   const pectoralSternum = { x: 325, y: 295 };
   const upperArmMid = {
     x: shoulder.x + 0.45 * (elbow.x - shoulder.x),
     y: shoulder.y + 0.45 * (elbow.y - shoulder.y),
   };
 
-  // Deltoides Anterior: Clavicle/Shoulder top to Humerus mid
   const deltoidOrigin = { x: 265, y: 300 };
 
-  // Tríceps: Back of upper arm, from shoulder-blade area to elbow
   const tricepsOrigin = { x: 270, y: 332 };
   const upperArmMidBack = {
     x: shoulder.x + 0.5 * (elbow.x - shoulder.x) - 8,
@@ -67,6 +97,11 @@ export default function KinematicScene() {
   const elbowLabelX = Math.min(elbow.x, barbell.x) + Math.abs(elbow.x - barbell.x) / 2;
   const elbowRectX = elbowLabelX - 32;
 
+  // Vector height scale: heavier loads demand taller, bolder gravity arrows
+  const gravityVectorHeight = 30 + 35 * (weight / 60);
+  const gravityVectorTextY = gravityVectorHeight + 10;
+  const vectorThickness = 1.8 + weight / 50;
+
   return (
     <div className="w-full flex flex-col items-center justify-center p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/80 shadow-2xl backdrop-blur-md">
       <div className="w-full flex items-center justify-between mb-3 border-b border-zinc-800 pb-3">
@@ -80,8 +115,17 @@ export default function KinematicScene() {
 
       {/* Interactive SVG Canvas */}
       <svg
+        ref={svgRef}
         viewBox="0 0 600 500"
-        className="w-full max-w-[550px] aspect-square rounded-xl bg-zinc-950/60 border border-zinc-900 shadow-inner select-none"
+        onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientY); }}
+        onMouseMove={(e) => { e.preventDefault(); handleMove(e.clientY); }}
+        onMouseUp={handleEnd}
+        onMouseLeave={handleEnd}
+        onTouchStart={(e) => { handleStart(e.touches[0].clientY); }}
+        onTouchMove={(e) => { handleMove(e.touches[0].clientY); }}
+        onTouchEnd={handleEnd}
+        onTouchCancel={handleEnd}
+        className="w-full max-w-[550px] aspect-square rounded-xl bg-zinc-950/60 border border-zinc-900 shadow-inner select-none cursor-row-resize touch-none"
       >
         {/* SVG definitions for patterns, markers and glow filters */}
         <defs>
@@ -93,8 +137,9 @@ export default function KinematicScene() {
             <stop offset="0%" stopColor="#2e2e30" />
             <stop offset="100%" stopColor="#1a1a1c" />
           </linearGradient>
-          <filter id="vectorGlow" x="-20%" y="-20%" width="140%" height="140%">
-            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.8" />
+          <filter id="vectorGlow" x="-25%" y="-25%" width="150%" height="150%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
         </defs>
 
@@ -158,8 +203,8 @@ export default function KinematicScene() {
         />
 
         {/* Head with skull contours */}
-        <circle cx="170" cy="305" r="24" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity={0.85} />
-        <path d="M 160,317 Q 165,327 172,327 L 180,327 Z" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity={0.85} /> {/* Jawline */}
+        <circle cx="170" cy="305" r="24" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
+        <path d="M 160,317 Q 165,327 172,327 L 180,327 Z" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" /> {/* Jawline */}
         
         {/* Neck */}
         <path d="M 188,310 L 205,318 L 200,330 L 182,324 Z" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
@@ -172,9 +217,9 @@ export default function KinematicScene() {
         <line x1="390" y1="325" x2="440" y2="385" stroke="#1e1b4b" strokeWidth="8" strokeLinecap="round" />
         
         {/* Calf (leg segment 2) to floor */}
-        <line x1="440" y1="385" x2="455" y2="460" stroke="#4338ca" strokeWidth="10" strokeLinecap="round" opacity="0.7" />
+        <line x1="440" y1="385" x2="455" y2="460" stroke="#4338ca" strokeWidth="10" strokeLinecap="round" opacity={0.7} />
         <line x1="440" y1="385" x2="455" y2="460" stroke="#1e1b4b" strokeWidth="6" strokeLinecap="round" />
-        <rect x="445" y="455" width="22" height="7" rx="2" fill="#4338ca" opacity={0.8} />
+        <rect x="445" y="455" width="22" height="7" rx="2" fill="#4338ca" opacity="0.8" />
 
         {/* Torso Profile Outline (Chest Profile where bar touches) */}
         <path
@@ -183,7 +228,7 @@ export default function KinematicScene() {
           stroke="#4338ca"
           strokeWidth="3"
           strokeLinecap="round"
-          opacity={0.85}
+          opacity="0.85"
         />
 
         {/* 5. ANATOMICAL MUSCLES LAYER (Dynamic color/glow) */}
@@ -194,7 +239,7 @@ export default function KinematicScene() {
           stroke={tricepsColor}
           strokeWidth="15"
           strokeLinecap="round"
-          className="transition-colors duration-150 ease-out cursor-pointer"
+          className="transition-colors duration-150 ease-out"
         >
           <title>{`Tríceps: ${tricepsTension}%`}</title>
         </path>
@@ -215,7 +260,7 @@ export default function KinematicScene() {
           stroke={pectoralColor}
           strokeWidth="2"
           fillOpacity={pectoralFillOpacity}
-          className="transition-colors duration-150 ease-out cursor-pointer"
+          className="transition-colors duration-150 ease-out"
         >
           <title>{`Pectoral Mayor: ${pectoralTension}%`}</title>
         </path>
@@ -231,7 +276,7 @@ export default function KinematicScene() {
           stroke={deltoidColor}
           strokeWidth="2"
           fillOpacity={deltoidFillOpacity}
-          className="transition-colors duration-150 ease-out cursor-pointer"
+          className="transition-colors duration-150 ease-out"
         >
           <title>{`Deltoides Anterior: ${deltoidTension}%`}</title>
         </path>
@@ -248,7 +293,7 @@ export default function KinematicScene() {
             opacity={0.9}
           />
           {/* Internal marrow cavity line */}
-          <line x1="14" y1="0" x2={humerusLength - 12} y2="0" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="5,3" opacity={0.6} />
+          <line x1="14" y1="0" x2={humerusLength - 12} y2="0" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="5,3" opacity="0.6" />
         </g>
 
         {/* Forearm Bones (Radius & Ulna) - Rotates and scales dynamically */}
@@ -376,34 +421,49 @@ export default function KinematicScene() {
 
         {/* 8. BARBELL & OLYMPIC WEIGHT PLATES (Dynamic movement) */}
         <g transform={`translate(${barbell.x}, ${barbell.y})`}>
-          {/* Olympic Barbell rod (Sagittal view, end of barbell represents a cylinder/circle) */}
-          {/* Bar core */}
+          {/* Olympic Barbell rod (Sagittal view) */}
           <circle cx="0" cy="0" r="14" fill="#a1a1aa" stroke="#52525b" strokeWidth="1.5" />
           <circle cx="0" cy="0" r="6" fill="#27272a" />
           
-          {/* Bar collar */}
+          {/* Bar collar sleeve */}
           <rect x="-18" y="-12" width="6" height="24" rx="1" fill="#71717a" stroke="#3f3f46" strokeWidth="1" />
           
-          {/* Weight plates (seen from side: concentric circles representing stack of plates) */}
-          {/* First Plate: Red (25 kg) */}
-          <circle cx="0" cy="0" r="42" fill="none" stroke="#ef4444" strokeWidth="12" opacity="0.95" />
-          <circle cx="0" cy="0" r="48" fill="none" stroke="#dc2626" strokeWidth="1" />
-          <circle cx="0" cy="0" r="36" fill="none" stroke="#b91c1c" strokeWidth="1" />
-          {/* Inner ring */}
-          <circle cx="0" cy="0" r="18" fill="none" stroke="#e4e4e7" strokeWidth="2" />
-          
-          {/* Label text on weight plate */}
-          <text x="0" y="3" fill="#ffffff" fontSize="9" fontWeight="extrabold" fontFamily="sans-serif" textAnchor="middle" opacity={0.9}>
-            20 kg
+          {/* Dynamic Weight plates stacking horizontally (concentric offset cylinders in sagittal view) */}
+          {Math.ceil((weight - 20) / 20) === 0 ? (
+            // Collar detail for an empty bar
+            <circle cx="0" cy="0" r="15" fill="#52525b" stroke="#27272a" strokeWidth="1.5" />
+          ) : (
+            // Stack weight plates along the bar sleeve to the left
+            Array.from({ length: Math.min(5, Math.ceil((weight - 20) / 20)) }).map((_, i) => {
+              const colors = ["#ef4444", "#3b82f6", "#10b981", "#eab308", "#8b5cf6"];
+              const plateColor = colors[i % colors.length];
+              const radius = 42 - i * 1.5; // slightly offset radius sizes
+              const offset = -i * 8; // slide to the left on sagittal sleeve
+              return (
+                <g key={i} transform={`translate(${offset}, 0)`}>
+                  {/* Plate face */}
+                  <circle cx="0" cy="0" r={radius} fill="#18181b" stroke={plateColor} strokeWidth="8" opacity="0.9" />
+                  <circle cx="0" cy="0" r={radius} fill="none" stroke="#09090b" strokeWidth="1" />
+                  {/* Inner ring */}
+                  <circle cx="0" cy="0" r="16" fill="none" stroke="#71717a" strokeWidth="1" opacity="0.5" />
+                </g>
+              );
+            })
+          )}
+
+          {/* Barbell sleeve cap with text */}
+          <circle cx="0" cy="0" r="14" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
+          <text x="0" y="3" fill="#ffffff" fontSize="8" fontWeight="extrabold" fontFamily="sans-serif" textAnchor="middle" opacity="0.95">
+            {weight}k
           </text>
 
-          {/* Bold Force Vector Arrow pointing downwards from gravity center */}
+          {/* Bold Force Vector Arrow pointing downwards from gravity center (scales dynamically with weight) */}
           <g transform="translate(0, 10)" filter="url(#vectorGlow)">
-            <line x1="0" y1="0" x2="0" y2="45" stroke="#ef4444" strokeWidth="3" />
-            <polygon points="-6,40 0,50 6,40" fill="#ef4444" />
+            <line x1="0" y1="0" x2="0" y2={gravityVectorHeight} stroke="#ef4444" strokeWidth={vectorThickness} />
+            <polygon points={`-6,${gravityVectorHeight - 5} 0,${gravityVectorHeight + 5} 6,${gravityVectorHeight - 5}`} fill="#ef4444" />
           </g>
-          <text x="14" y="45" fill="#f87171" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
-            F_g (Carga)
+          <text x="14" y={gravityVectorTextY} fill="#f87171" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
+            {barbellForce} N
           </text>
         </g>
 
@@ -417,6 +477,14 @@ export default function KinematicScene() {
         <text x={wrist.x + 22} y={wrist.y - 10} fill="#f4f4f5" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
           Muñeca
         </text>
+
+        {/* 10. Floating Interactive Instructions Overlay */}
+        <g transform="translate(300, 485)">
+          <rect x="-135" y="-12" width="270" height="24" rx="12" fill="#18181b" stroke="#27272a" strokeWidth="1" opacity="0.8" />
+          <text x="0" y="3.5" fill="#a1a1aa" fontSize="9" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">
+            👉 Desliza verticalmente sobre el gráfico para analizar
+          </text>
+        </g>
       </svg>
 
       {/* Mini real-time angle display badge */}

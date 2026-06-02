@@ -7,7 +7,9 @@ import { Activity, Dumbbell, ShieldAlert, Award, Compass } from "lucide-react";
 
 export default function TensionPanel() {
   const progress = useSimulationStore((state) => state.progress);
-  const metrics = calculateBiomechanics(progress);
+  const weight = useSimulationStore((state) => state.weight);
+  
+  const metrics = calculateBiomechanics(progress, weight);
   
   const {
     shoulderAngle,
@@ -17,10 +19,12 @@ export default function TensionPanel() {
     pectoralTension,
     tricepsTension,
     deltoidTension,
+    barbellForce,
+    shoulderTorque,
+    elbowTorque,
   } = metrics;
 
   // Determine active phase for descriptive UI
-  // Lowering is progress > 5 && progress < 98, and we can assume movement direction or simply detail progress thresholds
   const isNearChest = progress > 70;
   const isNearLockout = progress < 30;
   
@@ -55,7 +59,7 @@ export default function TensionPanel() {
       tension: tricepsTension,
       color: getMuscleColor(tricepsTension),
       bgGlow: "rgba(59, 130, 246, 0.1)",
-      eccentricDesc: "Tensión moderada de control (35%) para ralentizar de forma excéntrica la flexión del codo.",
+      eccentricDesc: "Tensión de control para ralentizar de forma excéntrica la flexión del codo bajo la carga.",
       concentricDesc: "Incremento crítico y masivo hasta 100% de fuerza explosiva para lograr el bloqueo articular.",
       currentAction: isNearLockout 
         ? "Activación crítica al 100% para consolidar la extensión total." 
@@ -68,7 +72,7 @@ export default function TensionPanel() {
       tension: deltoidTension,
       color: getMuscleColor(deltoidTension),
       bgGlow: "rgba(168, 85, 247, 0.1)",
-      eccentricDesc: "Tensión sinérgica progresiva hasta el 95% acompañando al pectoral en la adducción del brazo.",
+      eccentricDesc: "Tensión sinérgica progresiva acompañando al pectoral en la adducción del brazo.",
       concentricDesc: "Asistencia constante de empuje durante toda la fase de flexión anterior del hombro.",
       currentAction: isNearChest 
         ? "Sinergia activa máxima para estabilizar la articulación glenohumeral." 
@@ -82,20 +86,37 @@ export default function TensionPanel() {
       
       {/* Header */}
       <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
-        <h2 className="text-sm font-semibold tracking-wider uppercase text-emerald-400">
+        <h2 className="text-sm font-semibold tracking-wider uppercase text-emerald-400 flex items-center gap-1.5">
+          <Compass className="w-4 h-4 text-emerald-400 animate-spin-slow" />
           Análisis Biomecánico Dinámico
         </h2>
-        <span className="flex items-center gap-1.5 text-xs text-zinc-400">
-          <Compass className="w-3.5 h-3.5 animate-spin-slow text-zinc-500" />
+        <span className="text-[10px] bg-zinc-950 text-zinc-400 px-2 py-0.5 rounded border border-zinc-800 font-mono">
           Módulo de Press Plano
         </span>
       </div>
 
-      {/* Real-time Moment Arms Dashboard */}
+      {/* Dynamic Weight & Force gravity box */}
+      <div className="bg-zinc-950/40 p-3.5 rounded-xl border border-zinc-850 flex items-center justify-between shadow-inner">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 bg-zinc-900 rounded-xl border border-zinc-800 text-zinc-400">
+            <Dumbbell className="w-4 h-4 text-emerald-400" />
+          </div>
+          <div>
+            <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black block">Carga Seleccionada</span>
+            <span className="text-xs font-bold text-zinc-200">{weight} kg (Barra + Discos)</span>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-black block">Fuerza Gravitacional (Fg)</span>
+          <span className="text-xs font-black text-red-400 font-mono">{barbellForce} N</span>
+        </div>
+      </div>
+
+      {/* Real-time Biomechanics & Torque Dashboard */}
       <div className="grid grid-cols-2 gap-4">
         {/* Shoulder Moment Arm Card */}
-        <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/60 shadow-md">
-          <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider block mb-1">
+        <div className="bg-zinc-950/50 p-3.5 rounded-xl border border-zinc-800/60 shadow-md">
+          <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block mb-1">
             B. Momento Hombro
           </span>
           <div className="flex items-baseline gap-1">
@@ -104,14 +125,14 @@ export default function TensionPanel() {
             </span>
             <span className="text-xs text-zinc-400">cm</span>
           </div>
-          <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
-            Distancia horizontal desde la barra al hombro. Determina la carga del Pectoral.
+          <p className="text-[9px] text-zinc-500 mt-1 leading-relaxed">
+            Distancia barra-hombro. Determina la carga del Pectoral.
           </p>
         </div>
 
         {/* Elbow Moment Arm Card */}
-        <div className="bg-zinc-950/50 p-4 rounded-xl border border-zinc-800/60 shadow-md">
-          <span className="text-xs text-zinc-500 font-semibold uppercase tracking-wider block mb-1">
+        <div className="bg-zinc-950/50 p-3.5 rounded-xl border border-zinc-800/60 shadow-md">
+          <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block mb-1">
             B. Momento Codo
           </span>
           <div className="flex items-baseline gap-1">
@@ -120,8 +141,40 @@ export default function TensionPanel() {
             </span>
             <span className="text-xs text-zinc-400">cm</span>
           </div>
-          <p className="text-[10px] text-zinc-500 mt-1 leading-relaxed">
-            Distancia horizontal desde la barra al codo. Regula la demanda sobre el Tríceps.
+          <p className="text-[9px] text-zinc-500 mt-1 leading-relaxed">
+            Distancia barra-codo. Regula la demanda sobre el Tríceps.
+          </p>
+        </div>
+
+        {/* Shoulder Torque Card */}
+        <div className="bg-zinc-950/50 p-3.5 rounded-xl border border-zinc-800/60 shadow-md">
+          <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block mb-1">
+            Torque Hombro
+          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-black font-mono text-blue-500">
+              {shoulderTorque}
+            </span>
+            <span className="text-xs text-zinc-400">N·m</span>
+          </div>
+          <p className="text-[9px] text-zinc-500 mt-1 leading-relaxed">
+            Momento flexor neto en el hombro. Exige torque del pectoral.
+          </p>
+        </div>
+
+        {/* Elbow Torque Card */}
+        <div className="bg-zinc-950/50 p-3.5 rounded-xl border border-zinc-800/60 shadow-md">
+          <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider block mb-1">
+            Torque Codo
+          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-black font-mono text-emerald-500">
+              {elbowTorque}
+            </span>
+            <span className="text-xs text-zinc-400">N·m</span>
+          </div>
+          <p className="text-[9px] text-zinc-500 mt-1 leading-relaxed">
+            Momento flexor neto en el codo. Exige torque del tríceps.
           </p>
         </div>
       </div>

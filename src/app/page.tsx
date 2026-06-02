@@ -16,7 +16,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-lg font-black tracking-wider uppercase text-zinc-100 flex items-center gap-1.5">
-                LISS <span className="text-xs font-normal tracking-wide lowercase text-blue-500 px-2 py-0.5 rounded-full border border-blue-950 bg-blue-950/20">v3.0 MVP</span>
+                Axis <span className="text-xs font-normal tracking-wide lowercase text-blue-500 px-2 py-0.5 rounded-full border border-blue-950 bg-blue-950/20">v3.0 MVP</span>
               </h1>
               <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">
                 Simulador Interactivo de Biomecánica Aplicada

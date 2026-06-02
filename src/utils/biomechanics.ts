@@ -19,13 +19,15 @@ export interface BiomechanicalMetrics {
   pectoralTension: number; // 0 to 100
   tricepsTension: number; // 0 to 100
   deltoidTension: number; // 0 to 100
+  barbellForce: number; // in Newtons (N)
+  shoulderTorque: number; // in Newton-meters (N-m)
+  elbowTorque: number; // in Newton-meters (N-m)
 }
 
 // Fixed dimensions for the 2D sagittal biomechanical model
-// Adjusted lengths to keep elbows at mid-chest level rather than reaching the waist
 export const SHOULDER_POS: Point = { x: 280, y: 320 }; // Fixed shoulder joint
-export const L_ARM = 95; // Adjusted length of upper arm (shoulder to elbow)
-export const L_FOREARM = 85; // Adjusted length of forearm (elbow to wrist)
+export const L_ARM = 95; // Upper arm length
+export const L_FOREARM = 85; // Forearm length
 export const PX_TO_CM = 0.3; // Scale factor for moment arms (pixels to cm)
 
 /**
@@ -88,9 +90,9 @@ export function solveElbowPosition(shoulder: Point, wrist: Point, r1: number, r2
 }
 
 /**
- * Computes all biomechanical metrics based on simulation progress
+ * Computes all biomechanical metrics based on simulation progress and load weight
  */
-export function calculateBiomechanics(progress: number): BiomechanicalMetrics {
+export function calculateBiomechanics(progress: number, weight: number = 60): BiomechanicalMetrics {
   const barbell = getBarbellPosition(progress);
   const wrist = { ...barbell }; // Wrist holds the barbell
   
@@ -98,13 +100,9 @@ export function calculateBiomechanics(progress: number): BiomechanicalMetrics {
   const elbow = solveElbowPosition(shoulder, wrist, L_ARM, L_FOREARM);
   
   // Calculate joint angles in degrees
-  // 1. Shoulder joint angle relative to vertical (pointing down)
-  // Lockout is straight up, which is 90 degrees relative to horizontal.
   const armAngleRad = Math.atan2(elbow.y - shoulder.y, elbow.x - shoulder.x);
   const shoulderAngle = Math.round(90 - (armAngleRad - Math.PI / 2) * (180 / Math.PI));
   
-  // 2. Elbow joint angle: angle between upper arm (shoulder to elbow) and forearm (wrist to elbow)
-  // 180 degrees is fully extended (straight arm), ~35 degrees is fully bent.
   const v1 = { x: shoulder.x - elbow.x, y: shoulder.y - elbow.y };
   const v2 = { x: wrist.x - elbow.x, y: wrist.y - elbow.y };
   
@@ -116,22 +114,27 @@ export function calculateBiomechanics(progress: number): BiomechanicalMetrics {
   const elbowAngle = Math.round(Math.acos(cosTheta) * (180 / Math.PI));
   
   // Calculate Moment Arms (horizontal distance from joint to force vector)
-  // Force vector of gravity is a vertical line passing through the barbell (X = barbell.x)
   const shoulderMomentArmPx = Math.abs(barbell.x - shoulder.x);
   const elbowMomentArmPx = Math.abs(barbell.x - elbow.x);
   
   const shoulderMomentArm = parseFloat((shoulderMomentArmPx * PX_TO_CM).toFixed(1));
   const elbowMomentArm = parseFloat((elbowMomentArmPx * PX_TO_CM).toFixed(1));
   
-  // Calculate Muscle Tensions according to activation matrix
-  // Pectoral Mayor: increases to 100% at chest touch (progress 100), decreases to 10% at lockout (progress 0)
-  const pectoralTension = Math.round(10 + 90 * (progress / 100));
+  // Real Physics calculations:
+  // Force of barbell: Mass * Gravity
+  const barbellForce = parseFloat((weight * 9.81).toFixed(1)); // in Newtons
   
-  // Triceps Braquial: 100% active at lockout (progress 0), drops to 35% at chest (progress 100)
-  const tricepsTension = Math.round(100 - 65 * (progress / 100));
+  // Torques: Force * Moment Arm (convert cm to meters)
+  const shoulderTorque = parseFloat((barbellForce * (shoulderMomentArm / 100)).toFixed(1)); // N-m
+  const elbowTorque = parseFloat((barbellForce * (elbowMomentArm / 100)).toFixed(1)); // N-m
+
+  // Calculate Muscle Tensions scale based on weight (referenced to standard 60 kg)
+  // Heavier load leads to higher activation/tension. An empty bar (20kg) has very low tension.
+  const loadFactor = weight / 60;
   
-  // Deltoides Anterior: sinergist, increases to 95% at chest touch, decreases to 10% at lockout
-  const deltoidTension = Math.round(10 + 85 * (progress / 100));
+  const pectoralTension = Math.round(Math.min(100, Math.max(5, (10 + 90 * (progress / 100)) * loadFactor)));
+  const tricepsTension = Math.round(Math.min(100, Math.max(5, (100 - 65 * (progress / 100)) * loadFactor)));
+  const deltoidTension = Math.round(Math.min(100, Math.max(5, (10 + 85 * (progress / 100)) * loadFactor)));
   
   return {
     jointPositions: { shoulder, elbow, wrist, barbell },
@@ -142,6 +145,9 @@ export function calculateBiomechanics(progress: number): BiomechanicalMetrics {
     pectoralTension,
     tricepsTension,
     deltoidTension,
+    barbellForce,
+    shoulderTorque,
+    elbowTorque,
   };
 }
 

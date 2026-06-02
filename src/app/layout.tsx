@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Liss - Simulador Interactivo de Biomecánica Aplicada",
+  title: "Axis - Simulador Interactivo de Biomecánica Aplicada",
   description: "Simulador interactivo 2D para el análisis biomecánico de Press de Banca Plano, diseñado para educadores de ciencias del deporte y profesionales de la salud. Analiza trayectorias, ángulos articulares y tensiones musculares en tiempo real.",
 };
 
