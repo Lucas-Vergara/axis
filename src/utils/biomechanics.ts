@@ -22,9 +22,10 @@ export interface BiomechanicalMetrics {
 }
 
 // Fixed dimensions for the 2D sagittal biomechanical model
+// Adjusted lengths to keep elbows at mid-chest level rather than reaching the waist
 export const SHOULDER_POS: Point = { x: 280, y: 320 }; // Fixed shoulder joint
-export const L_ARM = 125; // Length of upper arm (shoulder to elbow)
-export const L_FOREARM = 115; // Length of forearm (elbow to wrist)
+export const L_ARM = 95; // Adjusted length of upper arm (shoulder to elbow)
+export const L_FOREARM = 85; // Adjusted length of forearm (elbow to wrist)
 export const PX_TO_CM = 0.3; // Scale factor for moment arms (pixels to cm)
 
 /**
@@ -34,21 +35,19 @@ export const PX_TO_CM = 0.3; // Scale factor for moment arms (pixels to cm)
 export function getBarbellPosition(progress: number): Point {
   const p = progress / 100;
   
-  // Starting point (lockout directly above shoulder)
+  // Starting point (lockout directly above shoulder, aligned vertically)
   const xStart = 280;
-  const yStart = 100;
+  const yStart = 140; // Lockout at Y=140 is exactly L_ARM + L_FOREARM (95+85=180px) from shoulder
   
-  // Ending point (chest, slightly forward/downwards from shoulder)
-  const xEnd = 345;
-  const yEnd = 300;
+  // Ending point (chest touch, slightly forward and down)
+  const xEnd = 330; 
+  const yEnd = 290; // Higher chest peak at Y=290
   
   // Parabolic "J-curve" calculation
-  // The bar curves slightly towards the head (left, negative X) early in the press,
-  // then curves down and forward towards the sternum (right, positive X)
   const y = yStart + (yEnd - yStart) * p;
   
-  // Add a sine wave component to produce the J-parabola bend
-  const x = xStart + (xEnd - xStart) * Math.pow(p, 1.5) + 12 * Math.sin(p * Math.PI);
+  // Curved J-parabola path
+  const x = xStart + (xEnd - xStart) * Math.pow(p, 1.5) + 10 * Math.sin(p * Math.PI);
   
   return { x, y };
 }

@@ -6,7 +6,7 @@ import { Brain, Sparkles, BookOpen, GitMerge, Info } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#121212]">
+    <div className="flex flex-col min-h-screen bg-background">
       {/* 1. Header Area */}
       <header className="w-full py-4 px-6 border-b border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">

@@ -27,7 +27,7 @@ export default function KinematicScene() {
 
   // Derive points for muscle geometry
   // Pectoral Mayor: Sternum (on chest) to Humerus (upper arm mid)
-  const pectoralSternum = { x: 340, y: 305 };
+  const pectoralSternum = { x: 325, y: 295 };
   const upperArmMid = {
     x: shoulder.x + 0.45 * (elbow.x - shoulder.x),
     y: shoulder.y + 0.45 * (elbow.y - shoulder.y),
@@ -37,11 +37,35 @@ export default function KinematicScene() {
   const deltoidOrigin = { x: 265, y: 300 };
 
   // Tríceps: Back of upper arm, from shoulder-blade area to elbow
-  const tricepsOrigin = { x: 270, y: 335 };
+  const tricepsOrigin = { x: 270, y: 332 };
   const upperArmMidBack = {
-    x: shoulder.x + 0.5 * (elbow.x - shoulder.x) - 10,
-    y: shoulder.y + 0.5 * (elbow.y - shoulder.y) + 5,
+    x: shoulder.x + 0.5 * (elbow.x - shoulder.x) - 8,
+    y: shoulder.y + 0.5 * (elbow.y - shoulder.y) + 4,
   };
+
+  // Calculate angles for rendering bone geometries in local coordinate systems
+  const humerusAngle = Math.atan2(elbow.y - shoulder.y, elbow.x - shoulder.x) * (180 / Math.PI);
+  const humerusLength = Math.sqrt(
+    Math.pow(elbow.x - shoulder.x, 2) + Math.pow(elbow.y - shoulder.y, 2)
+  );
+
+  const forearmAngle = Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x) * (180 / Math.PI);
+  const forearmLength = Math.sqrt(
+    Math.pow(wrist.x - elbow.x, 2) + Math.pow(wrist.y - elbow.y, 2)
+  );
+
+  // Pre-calculate clean variable values to avoid division operator parsing issues in Turbopack JSX
+  const tricepsFiberOpacity = 0.3 + 0.3 * (tricepsTension / 100);
+  const pectoralFillOpacity = 0.75 + 0.2 * (pectoralTension / 100);
+  const pectoralFiberOpacity = 0.2 + 0.3 * (pectoralTension / 100);
+  const deltoidFillOpacity = 0.75 + 0.2 * (deltoidTension / 100);
+
+  // Moment arm label coordinates calculated outside JSX
+  const shoulderLabelX = Math.min(shoulder.x, barbell.x) + Math.abs(shoulder.x - barbell.x) / 2;
+  const shoulderRectX = shoulderLabelX - 32;
+
+  const elbowLabelX = Math.min(elbow.x, barbell.x) + Math.abs(elbow.x - barbell.x) / 2;
+  const elbowRectX = elbowLabelX - 32;
 
   return (
     <div className="w-full flex flex-col items-center justify-center p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/80 shadow-2xl backdrop-blur-md">
@@ -49,7 +73,7 @@ export default function KinematicScene() {
         <h2 className="text-sm font-semibold tracking-wider uppercase text-blue-400">
           Escenario Cinemático (Vista Sagital)
         </h2>
-        <span className="text-xs bg-zinc-800 text-zinc-400 px-2.5 py-1 rounded-full border border-zinc-700 font-mono">
+        <span className="text-xs bg-zinc-850 text-zinc-400 px-2.5 py-1 rounded-full border border-zinc-800 font-mono">
           Escala: 1px = 0.3 cm
         </span>
       </div>
@@ -100,35 +124,66 @@ export default function KinematicScene() {
         <path d="M 230,340 L 230,170 L 220,170 L 220,150 L 245,150 L 245,170 L 235,170 L 235,340 Z" fill="#18181b" stroke="#3f3f46" strokeWidth="1" />
 
         {/* 4. Human Body Silhouette (Lying position, sagittal view) */}
-        {/* Head */}
-        <circle cx="160" cy="305" r="28" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
-        {/* Neck */}
-        <path d="M 188,310 L 210,320 L 205,335 L 180,325 Z" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
-        {/* Hips and Pelvis */}
-        <ellipse cx="400" cy="330" rx="35" ry="25" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
-        {/* Thigh (leg segment 1) */}
-        <line x1="400" y1="330" x2="455" y2="390" stroke="#4338ca" strokeWidth="12" strokeLinecap="round" opacity="0.7" />
-        <line x1="400" y1="330" x2="455" y2="390" stroke="#1e1b4b" strokeWidth="8" strokeLinecap="round" />
-        {/* Calf (leg segment 2) to floor */}
-        <line x1="455" y1="390" x2="470" y2="460" stroke="#4338ca" strokeWidth="10" strokeLinecap="round" opacity="0.7" />
-        <line x1="455" y1="390" x2="470" y2="460" stroke="#1e1b4b" strokeWidth="6" strokeLinecap="round" />
-        <rect x="460" y="455" width="25" height="7" rx="2" fill="#4338ca" opacity="0.8" />
+        {/* Spine / Vertebrae (Anatomical Detail) */}
+        <g stroke="#4338ca" strokeWidth="1.5" fill="none" opacity={0.35}>
+          {Array.from({ length: 13 }).map((_, i) => (
+            <rect
+              key={i}
+              x={185 + i * 16}
+              y={324}
+              width="10"
+              height="6"
+              rx="1.5"
+              stroke="#6366f1"
+              fill="#1e1b4b"
+            />
+          ))}
+        </g>
 
-        {/* Chest Profile (torso shape where bar touches) */}
-        {/* Clavicle to bottom of sternum to abdomen */}
+        {/* Detailed Ribcage (Anatomical Detail) */}
+        <g stroke="#818cf8" strokeWidth="1.2" fill="none" opacity={0.3}>
+          <path d="M 260,324 Q 275,295 265,310" />
+          <path d="M 275,324 Q 292,290 280,307" />
+          <path d="M 290,324 Q 308,285 295,302" />
+          <path d="M 305,324 Q 325,282 310,299" />
+          <path d="M 320,324 Q 340,285 325,303" />
+          <path d="M 335,324 Q 355,290 340,308" />
+        </g>
+
+        {/* Torso Clavicle & Ribcage Fill Layer */}
         <path
-          d="M 200,325 Q 240,320 280,318 Q 320,285 345,299 Q 375,315 400,330"
+          d="M 210,322 Q 245,315 280,312 Q 305,278 330,289 Q 360,305 390,325 L 390,332 L 210,332 Z"
+          fill="#1e1b4b"
+          opacity={0.25}
+        />
+
+        {/* Head with skull contours */}
+        <circle cx="170" cy="305" r="24" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity={0.85} />
+        <path d="M 160,317 Q 165,327 172,327 L 180,327 Z" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity={0.85} /> {/* Jawline */}
+        
+        {/* Neck */}
+        <path d="M 188,310 L 205,318 L 200,330 L 182,324 Z" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
+        
+        {/* Hips and Pelvis */}
+        <ellipse cx="390" cy="325" rx="30" ry="20" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
+        
+        {/* Thigh (leg segment 1) */}
+        <line x1="390" y1="325" x2="440" y2="385" stroke="#4338ca" strokeWidth="12" strokeLinecap="round" opacity={0.7} />
+        <line x1="390" y1="325" x2="440" y2="385" stroke="#1e1b4b" strokeWidth="8" strokeLinecap="round" />
+        
+        {/* Calf (leg segment 2) to floor */}
+        <line x1="440" y1="385" x2="455" y2="460" stroke="#4338ca" strokeWidth="10" strokeLinecap="round" opacity="0.7" />
+        <line x1="440" y1="385" x2="455" y2="460" stroke="#1e1b4b" strokeWidth="6" strokeLinecap="round" />
+        <rect x="445" y="455" width="22" height="7" rx="2" fill="#4338ca" opacity={0.8} />
+
+        {/* Torso Profile Outline (Chest Profile where bar touches) */}
+        <path
+          d="M 210,322 Q 245,315 280,312 Q 305,278 330,289 Q 360,305 390,325"
           fill="none"
           stroke="#4338ca"
-          strokeWidth="4"
+          strokeWidth="3"
           strokeLinecap="round"
-          opacity="0.8"
-        />
-        {/* Inner torso fill */}
-        <path
-          d="M 200,325 Q 240,320 280,318 Q 320,285 345,299 Q 375,315 400,330 L 400,335 L 200,335 Z"
-          fill="#1e1b4b"
-          opacity="0.3"
+          opacity={0.85}
         />
 
         {/* 5. ANATOMICAL MUSCLES LAYER (Dynamic color/glow) */}
@@ -143,14 +198,14 @@ export default function KinematicScene() {
         >
           <title>{`Tríceps: ${tricepsTension}%`}</title>
         </path>
-        {/* Triceps inner detail */}
+        {/* Triceps inner dynamic fibers */}
         <path
           d={`M ${tricepsOrigin.x},${tricepsOrigin.y} Q ${upperArmMidBack.x},${upperArmMidBack.y} ${elbow.x},${elbow.y}`}
           fill="none"
-          stroke="#fff"
-          strokeWidth="2"
+          stroke="#ffffff"
+          strokeWidth="2.5"
           strokeDasharray="4,6"
-          opacity="0.4"
+          opacity={tricepsFiberOpacity}
         />
 
         {/* PECTORAL MAYOR */}
@@ -159,43 +214,72 @@ export default function KinematicScene() {
           fill={pectoralColor}
           stroke={pectoralColor}
           strokeWidth="2"
-          fillOpacity="0.85"
+          fillOpacity={pectoralFillOpacity}
           className="transition-colors duration-150 ease-out cursor-pointer"
         >
           <title>{`Pectoral Mayor: ${pectoralTension}%`}</title>
         </path>
         {/* Pectoral Fiber details */}
-        <line x1="310" y1="315" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity="0.3" />
-        <line x1="325" y1="310" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity="0.3" />
-        <line x1="290" y1="318" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity="0.3" />
+        <line x1="305" y1="307" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity={pectoralFiberOpacity} />
+        <line x1="318" y1="302" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity={pectoralFiberOpacity} />
+        <line x1="285" y1="312" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity={pectoralFiberOpacity} />
 
         {/* DELTOIDES ANTERIOR */}
         <path
-          d={`M ${deltoidOrigin.x},${deltoidOrigin.y} Q ${shoulder.x - 8},${shoulder.y - 12} ${upperArmMid.x},${upperArmMid.y} Z`}
+          d={`M ${deltoidOrigin.x},${deltoidOrigin.y} Q ${shoulder.x - 6},${shoulder.y - 10} ${upperArmMid.x},${upperArmMid.y} Z`}
           fill={deltoidColor}
           stroke={deltoidColor}
           strokeWidth="2"
-          fillOpacity="0.85"
+          fillOpacity={deltoidFillOpacity}
           className="transition-colors duration-150 ease-out cursor-pointer"
         >
           <title>{`Deltoides Anterior: ${deltoidTension}%`}</title>
         </path>
 
-        {/* 6. BONES & JOINTS LAYER */}
-        {/* Upper Arm Bone (Humerus) */}
-        <line x1={shoulder.x} y1={shoulder.y} x2={elbow.x} y2={elbow.y} stroke="#e4e4e7" strokeWidth="6" strokeLinecap="round" />
-        {/* Forearm Bone (Radius/Ulna) */}
-        <line x1={elbow.x} y1={elbow.y} x2={wrist.x} y2={wrist.y} stroke="#e4e4e7" strokeWidth="5" strokeLinecap="round" />
+        {/* 6. DETAILED BONES & JOINTS LAYER (Anatomical Bone Silhouettes) */}
+        {/* Upper Arm Bone (Humerus) - Rotates and scales dynamically */}
+        <g transform={`translate(${shoulder.x}, ${shoulder.y}) rotate(${humerusAngle})`}>
+          {/* Humerus silhouette with epicondyle flared ends */}
+          <path
+            d={`M 0,0 C 5,8 10,4 12,2 L ${humerusLength - 10},2 C ${humerusLength - 8},3 ${humerusLength - 4},6 ${humerusLength},4 L ${humerusLength},-4 C ${humerusLength - 4},-6 ${humerusLength - 8},-3 ${humerusLength - 10},-2 L 12,-2 C 10,-4 5,-8 0,0 Z`}
+            fill="#e4e4e7"
+            stroke="#a1a1aa"
+            strokeWidth="1"
+            opacity={0.9}
+          />
+          {/* Internal marrow cavity line */}
+          <line x1="14" y1="0" x2={humerusLength - 12} y2="0" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="5,3" opacity={0.6} />
+        </g>
+
+        {/* Forearm Bones (Radius & Ulna) - Rotates and scales dynamically */}
+        <g transform={`translate(${elbow.x}, ${elbow.y}) rotate(${forearmAngle})`}>
+          {/* Bone 1: Radius */}
+          <path
+            d={`M 0,2 C 4,5 8,3 10,1.5 L ${forearmLength - 8},1 C ${forearmLength - 5},2 ${forearmLength - 2},4 ${forearmLength},2.5 L ${forearmLength},0.5 C ${forearmLength - 2},-1 ${forearmLength - 5},0 ${forearmLength - 8},-0.5 L 10,-1.5 C 8,-3 4,-5 0,2 Z`}
+            fill="#d4d4d8"
+            stroke="#71717a"
+            strokeWidth="0.8"
+            opacity={0.9}
+          />
+          {/* Bone 2: Ulna */}
+          <path
+            d={`M 0,-2 C 4,-0.5 8,-2 10,-2.5 L ${forearmLength - 8}, -3.5 C ${forearmLength - 5},-3 ${forearmLength - 2},-1 ${forearmLength},-2.5 L ${forearmLength},-4.5 C ${forearmLength - 2},-5 ${forearmLength - 5},-4.5 ${forearmLength - 8},-5.5 L 10,-4.5 C 8,-5 4,-3.5 0,-2 Z`}
+            fill="#f4f4f5"
+            stroke="#a1a1aa"
+            strokeWidth="0.8"
+            opacity={0.85}
+          />
+        </g>
 
         {/* Shoulder Joint Pin */}
-        <circle cx={shoulder.x} cy={shoulder.y} r="8" fill="#18181b" stroke="#3b82f6" strokeWidth="3" />
-        <circle cx={shoulder.x} cy={shoulder.y} r="18" fill="url(#shoulderGlow)" pointerEvents="none" />
+        <circle cx={shoulder.x} cy={shoulder.y} r="7" fill="#18181b" stroke="#3b82f6" strokeWidth="2.5" />
+        <circle cx={shoulder.x} cy={shoulder.y} r="15" fill="url(#shoulderGlow)" pointerEvents="none" />
 
         {/* Elbow Joint Pin */}
-        <circle cx={elbow.x} cy={elbow.y} r="7" fill="#18181b" stroke="#f4f4f5" strokeWidth="2.5" />
+        <circle cx={elbow.x} cy={elbow.y} r="6" fill="#18181b" stroke="#f4f4f5" strokeWidth="2" />
 
         {/* Wrist Joint Pin */}
-        <circle cx={wrist.x} cy={wrist.y} r="5" fill="#18181b" stroke="#f4f4f5" strokeWidth="2" />
+        <circle cx={wrist.x} cy={wrist.y} r="4.5" fill="#18181b" stroke="#f4f4f5" strokeWidth="1.5" />
 
         {/* 7. FORCE VECTORS & MOMENT ARMS (Scientific annotations) */}
         {/* Vertical Line of Force Action (Gravity passing through the bar) */}
@@ -207,7 +291,7 @@ export default function KinematicScene() {
           stroke="#ef4444"
           strokeWidth="1.5"
           strokeDasharray="4,4"
-          opacity="0.6"
+          opacity={0.6}
         />
 
         {/* Shoulder Moment Arm (Blue dimension line) */}
@@ -227,7 +311,7 @@ export default function KinematicScene() {
             <line x1={barbell.x} y1={shoulder.y - 6} x2={barbell.x} y2={shoulder.y + 6} stroke="#3b82f6" strokeWidth="2" />
             {/* Label box */}
             <rect
-              x={Math.min(shoulder.x, barbell.x) + Math.abs(shoulder.x - barbell.x) / 2 - 32}
+              x={shoulderRectX}
               y={shoulder.y - 12}
               width="64"
               height="20"
@@ -237,7 +321,7 @@ export default function KinematicScene() {
               strokeWidth="1"
             />
             <text
-              x={Math.min(shoulder.x, barbell.x) + Math.abs(shoulder.x - barbell.x) / 2}
+              x={shoulderLabelX}
               y={shoulder.y + 2}
               fill="#93c5fd"
               fontSize="9"
@@ -267,7 +351,7 @@ export default function KinematicScene() {
             <line x1={barbell.x} y1={elbow.y - 6} x2={barbell.x} y2={elbow.y + 6} stroke="#10b981" strokeWidth="2" />
             {/* Label box */}
             <rect
-              x={Math.min(elbow.x, barbell.x) + Math.abs(elbow.x - barbell.x) / 2 - 32}
+              x={elbowRectX}
               y={elbow.y - 12}
               width="64"
               height="20"
@@ -277,7 +361,7 @@ export default function KinematicScene() {
               strokeWidth="1"
             />
             <text
-              x={Math.min(elbow.x, barbell.x) + Math.abs(elbow.x - barbell.x) / 2}
+              x={elbowLabelX}
               y={elbow.y + 2}
               fill="#a7f3d0"
               fontSize="9"
@@ -309,7 +393,7 @@ export default function KinematicScene() {
           <circle cx="0" cy="0" r="18" fill="none" stroke="#e4e4e7" strokeWidth="2" />
           
           {/* Label text on weight plate */}
-          <text x="0" y="3" fill="#ffffff" fontSize="9" fontWeight="extrabold" fontFamily="sans-serif" textAnchor="middle" opacity="0.9">
+          <text x="0" y="3" fill="#ffffff" fontSize="9" fontWeight="extrabold" fontFamily="sans-serif" textAnchor="middle" opacity={0.9}>
             20 kg
           </text>
 
