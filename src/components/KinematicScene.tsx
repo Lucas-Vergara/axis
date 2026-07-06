@@ -117,15 +117,15 @@ export default function KinematicScene() {
   const dOrigin2 = { x: S.x - ux * 16 - pnx * 2, y: S.y - uy * 16 - pny * 2 }; // acromion side
   const dIns = { x: S.x + ux * 36 + pnx * 7, y: S.y + uy * 36 + pny * 7 }; // deltoid tuberosity
   const mDeltPath = `M${dOrigin1.x},${dOrigin1.y} Q${S.x + pnx*28 - ux*10},${S.y + pny*28 - uy*10} ${dOrigin2.x},${dOrigin2.y} Q${S.x + ux*15 - pnx*6},${S.y + uy*15 - pny*6} ${dIns.x},${dIns.y} Q${S.x + ux*20 + pnx*22},${S.y + uy*20 + pny*22} ${dOrigin1.x},${dOrigin1.y} Z`;
-  const dF1 = `M${dOrigin2.x + ux*8},${dOrigin2.y + uy*8} Q${S.x + ux*20 + pnx*6},${S.y + uy*20 + pny*6} ${dIns.x - ux*4},${dIns.y - uy*4}`; // Ant/Lat head separator
-  const dF2 = `M${(dOrigin1.x + dOrigin2.x)/2 + ux*5},${(dOrigin1.y + dOrigin2.y)/2 + uy*5} Q${S.x + ux*18 + pnx*16},${S.y + uy*18 + pny*16} ${dIns.x - ux*6},${dIns.y - uy*6}`;
+  const dF1 = ""; // Removed striations for simplicity
+  const dF2 = "";
 
   // Pectoral logic
-  const c1 = { x: 236, y: 334 };
-  const c2 = { x: 250, y: 362 };
+  const c1 = { x: 230, y: 340 };
+  const c2 = { x: 245, y: 375 };
   const ins = { x: S.x + ux * 24 + pnx * 5, y: S.y + uy * 24 + pny * 5 };
-  const mPecPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y} Q${(c2.x + ins.x) / 2},${(c2.y + ins.y) / 2 + 4} ${c2.x},${c2.y} Q${(c1.x + c2.x) / 2 - 4},${(c1.y + c2.y) / 2} ${c1.x},${c1.y} Z`;
-  const mPecHiPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y}`;
+  const mPecPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 15},${(c1.y + ins.y) / 2 - 18} ${ins.x},${ins.y} Q${(c2.x + ins.x) / 2},${(c2.y + ins.y) / 2 + 10} ${c2.x},${c2.y} Q${(c1.x + c2.x) / 2 - 8},${(c1.y + c2.y) / 2} ${c1.x},${c1.y} Z`;
+  const mPecHiPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 15},${(c1.y + ins.y) / 2 - 18} ${ins.x},${ins.y}`;
   const pF1 = `M${ins.x - ux*4},${ins.y - uy*4} Q${(c1.x + ins.x)/2 + 2},${(c1.y + ins.y)/2 - 8} ${c1.x + 8},${c1.y + 6}`; // Clavicular fibers
   const pF2 = `M${ins.x - ux*4},${ins.y - uy*4} Q${(c1.x + ins.x)/2 + 8},${(c1.y + ins.y)/2 - 1} ${c1.x + 11},${c1.y + 14}`; // Sternal fibers
   const pF3 = `M${ins.x - ux*4},${ins.y - uy*4} Q${(c2.x + ins.x)/2 - 2},${(c2.y + ins.y)/2} ${c2.x - 4},${c2.y - 6}`; // Costal fibers
@@ -150,10 +150,10 @@ export default function KinematicScene() {
   const maLblOpacity = Math.abs(Wx - S.x) > 34 ? 0.85 : 0;
 
   return (
-    <div className="w-full flex-1 relative flex items-center justify-center bg-white dark:bg-[#111] rounded-2xl border border-zinc-200 dark:border-neutral-800 overflow-hidden shadow-xl h-full transition-colors duration-300">
+    <div className="w-full relative flex items-center justify-center bg-white dark:bg-[#111] rounded-2xl border border-zinc-200 dark:border-neutral-800 overflow-hidden shadow-xl transition-colors duration-300 h-[380px] md:h-[420px] lg:h-[460px]">
       <svg
         ref={svgRef}
-        viewBox="0 0 800 600"
+        viewBox="90 65 580 340"
         preserveAspectRatio="xMidYMid meet"
         onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientX); }}
         onMouseMove={(e) => { e.preventDefault(); handleMove(e.clientX); }}
@@ -206,53 +206,106 @@ export default function KinematicScene() {
             <stop offset=".5" stopColor="rgb(224,165,46)" />
             <stop offset="1" stopColor="rgb(224,72,58)" />
           </linearGradient>
+
+          <linearGradient id="metalDark" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#1a1a1a" />
+            <stop offset="0.3" stopColor="#333" />
+            <stop offset="0.7" stopColor="#222" />
+            <stop offset="1" stopColor="#0a0a0a" />
+          </linearGradient>
+          
+          <linearGradient id="metalLight" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#d4d4d8" />
+            <stop offset="0.3" stopColor="#f4f4f5" />
+            <stop offset="0.7" stopColor="#e4e4e7" />
+            <stop offset="1" stopColor="#a1a1aa" />
+          </linearGradient>
+          
+          <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#3f3f46" />
+            <stop offset="0.2" stopColor="#27272a" />
+            <stop offset="0.8" stopColor="#18181b" />
+            <stop offset="1" stopColor="#09090b" />
+          </linearGradient>
         </defs>
 
         <rect width="100%" height="100%" fill="url(#grid)" />
 
-        {/* Power Rack */}
-        <g id="powerRack" opacity="0.95">
-          <rect x="140" y="540" width="120" height="11" strokeWidth="2" rx="2" className="fill-zinc-200 dark:fill-[#121212] stroke-zinc-300 dark:stroke-[#222]" />
-          <rect x="180" y="80" width="28" height="462" strokeWidth="2" className="fill-zinc-100 dark:fill-[#151515] stroke-zinc-300 dark:stroke-[#222]" />
-          <rect x="198" y="82" width="4" height="458" className="fill-zinc-200 dark:fill-[#1f1f1f]" />
-          <g className="fill-zinc-400 dark:fill-[#080808]">
-            {Array.from({ length: 18 }).map((_, i) => (
-              <circle key={i} cx="194" cy={110 + i * 20} r="3.5" />
-            ))}
+        {/* Volumetric Power Rack & Bench */}
+        <g opacity="0.65">
+          {/* Light Theme Rack & Bench */}
+          <g className="dark:hidden">
+            {/* Bench Legs */}
+            <rect x="150" y="407" width="24" height="140" rx="3" fill="url(#metalLight)" stroke="#a1a1aa" strokeWidth="1.5" />
+            <rect x="450" y="407" width="24" height="140" rx="3" fill="url(#metalLight)" stroke="#a1a1aa" strokeWidth="1.5" />
+            <rect x="120" y="542" width="400" height="12" rx="4" fill="url(#metalLight)" stroke="#a1a1aa" strokeWidth="1.5" />
+            {/* Rack Base & Upright */}
+            <rect x="140" y="540" width="120" height="14" rx="4" fill="url(#metalLight)" stroke="#a1a1aa" strokeWidth="1.5" />
+            <rect x="180" y="80" width="30" height="462" rx="3" fill="url(#metalLight)" stroke="#a1a1aa" strokeWidth="1.5" />
+            {/* Rack Holes */}
+            <g fill="#27272a">
+              {Array.from({ length: 18 }).map((_, i) => (
+                <ellipse key={i} cx="195" cy={110 + i * 20} rx="4" ry="5.5" />
+              ))}
+            </g>
+            {/* J-Hook */}
+            <path d="M 178 125 L 200 125 L 200 188 L 246 188 L 246 160 L 258 160 L 258 200 L 178 200 Z" fill="url(#metalLight)" stroke="#a1a1aa" strokeWidth="1.5" strokeLinejoin="round" />
+            <rect x="200" y="185" width="46" height="6" rx="2" fill="#18181b" /> {/* J-Hook Rubber */}
+            {/* Bench Pad */}
+            <rect x="85" y="392" width="450" height="18" rx="8" fill="url(#leather)" stroke="#09090b" strokeWidth="2" />
           </g>
-          <path d="M 180 320 L 380 320 L 380 336 L 180 336 Z" strokeWidth="2" className="fill-zinc-100 dark:fill-[#151515] stroke-zinc-300 dark:stroke-[#262626]" />
-          <rect x="208" y="318" width="168" height="4" className="fill-zinc-300 dark:fill-[#050505]" />
-          <path d="M 180 125 L 200 125 L 200 187 L 246 187 L 246 160 L 256 160 L 256 197 L 180 197 Z" strokeWidth="2" className="fill-zinc-100 dark:fill-[#151515] stroke-zinc-300 dark:stroke-[#262626]" />
-          <path d="M 198 125 L 202 125 L 202 185 L 244 185 L 244 160 L 248 160 L 248 189 L 198 189 Z" className="fill-zinc-300 dark:fill-[#050505]" />
-        </g>
 
-        {/* Bench Elements */}
-        <rect x="90" y="392" width="440" height="15" rx="5" strokeWidth="2" className="fill-zinc-100 dark:fill-[#1c1c1c] stroke-zinc-300 dark:stroke-[#2a2a2a]" />
-        <rect x="150" y="407" width="30" height="140" className="fill-zinc-200 dark:fill-[#151515]" />
-        <rect x="450" y="407" width="30" height="140" className="fill-zinc-200 dark:fill-[#151515]" />
-        <rect x="120" y="542" width="400" height="9" rx="3" className="fill-zinc-200 dark:fill-[#1a1a1a]" />
+          {/* Dark Theme Rack & Bench */}
+          <g className="hidden dark:block">
+            {/* Bench Legs */}
+            <rect x="150" y="407" width="24" height="140" rx="3" fill="url(#metalDark)" stroke="#111" strokeWidth="1.5" />
+            <rect x="450" y="407" width="24" height="140" rx="3" fill="url(#metalDark)" stroke="#111" strokeWidth="1.5" />
+            <rect x="120" y="542" width="400" height="12" rx="4" fill="url(#metalDark)" stroke="#111" strokeWidth="1.5" />
+            {/* Rack Base & Upright */}
+            <rect x="140" y="540" width="120" height="14" rx="4" fill="url(#metalDark)" stroke="#111" strokeWidth="1.5" />
+            <rect x="180" y="80" width="30" height="462" rx="3" fill="url(#metalDark)" stroke="#111" strokeWidth="1.5" />
+            {/* Rack Holes */}
+            <g fill="#09090b">
+              {Array.from({ length: 18 }).map((_, i) => (
+                <ellipse key={i} cx="195" cy={110 + i * 20} rx="4" ry="5.5" />
+              ))}
+            </g>
+            {/* J-Hook */}
+            <path d="M 178 125 L 200 125 L 200 188 L 246 188 L 246 160 L 258 160 L 258 200 L 178 200 Z" fill="url(#metalDark)" stroke="#111" strokeWidth="1.5" strokeLinejoin="round" />
+            <rect x="200" y="185" width="46" height="6" rx="2" fill="#09090b" />
+            {/* Bench Pad */}
+            <rect x="85" y="392" width="450" height="18" rx="8" fill="url(#leather)" stroke="#000" strokeWidth="2" />
+          </g>
+        </g>
 
         {/* Skin Silhouettes */}
         <g className="dark:hidden">
-          <path d="M188,356 Q214,322 262,332 Q332,340 402,350 Q452,356 470,365 Q530,375 540,460 Q540,500 520,530 L540,535 L540,542 L485,542 L490,530 Q490,490 510,460 Q470,410 460,392 Q402,399 300,397 Q222,397 188,388 Z" fill="url(#skinLight)" opacity=".7" stroke="#bda28b" strokeWidth="1.5" />
-          <path d="M175,356 Q168,326 142,330 Q118,336 122,360 Q126,384 156,384 Q178,382 188,368 Z" fill="url(#skinLight)" opacity=".7" stroke="#bda28b" strokeWidth="1.5" />
+          <path d="M 262,332 Q 332,340 402,350 Q 452,356 470,365 Q 530,375 540,460 Q 540,500 520,530 L 540,535 L 540,542 L 485,542 L 490,530 Q 490,490 510,460 Q 470,410 460,392 Q 402,399 300,397 Q 222,397 188,388 Q 180,380 175,380 Q 150,392 135,385 Q 115,370 120,350 Q 125,325 155,335 Q 170,340 175,355 Q 185,365 200,355 Q 230,340 262,332 Z" fill="url(#skinLight)" opacity=".7" stroke="#bda28b" strokeWidth="1.5" strokeLinejoin="round" />
         </g>
         <g className="hidden dark:block">
-          <path d="M188,356 Q214,322 262,332 Q332,340 402,350 Q452,356 470,365 Q530,375 540,460 Q540,500 520,530 L540,535 L540,542 L485,542 L490,530 Q490,490 510,460 Q470,410 460,392 Q402,399 300,397 Q222,397 188,388 Z" fill="url(#skin)" opacity=".55" stroke="#2a211e" strokeWidth="1.5" />
-          <path d="M175,356 Q168,326 142,330 Q118,336 122,360 Q126,384 156,384 Q178,382 188,368 Z" fill="url(#skin)" opacity=".6" stroke="#2a211e" strokeWidth="1.5" />
+          <path d="M 262,332 Q 332,340 402,350 Q 452,356 470,365 Q 530,375 540,460 Q 540,500 520,530 L 540,535 L 540,542 L 485,542 L 490,530 Q 490,490 510,460 Q 470,410 460,392 Q 402,399 300,397 Q 222,397 188,388 Q 180,380 175,380 Q 150,392 135,385 Q 115,370 120,350 Q 125,325 155,335 Q 170,340 175,355 Q 185,365 200,355 Q 230,340 262,332 Z" fill="url(#skin)" opacity=".6" stroke="#2a211e" strokeWidth="1.5" strokeLinejoin="round" />
         </g>
         
-        {/* Bones background */}
-        <g opacity=".8">
-          <path d="M262,338 Q300,352 300,384" fill="none" stroke="url(#boneGrad)" strokeWidth="3" opacity=".55" />
-          <path d="M288,340 Q326,354 326,386" fill="none" stroke="url(#boneGrad)" strokeWidth="3" opacity=".55" />
-          <path d="M316,344 Q352,358 352,388" fill="none" stroke="url(#boneGrad)" strokeWidth="3" opacity=".55" />
-          <path d="M344,347 Q378,360 378,388" fill="none" stroke="url(#boneGrad)" strokeWidth="3" opacity=".55" />
-          <line x1="252" y1="335" x2="300" y2="346" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" />
-          <line x1="248" y1="336" x2="270" y2="344" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" />
-          <path d="M272,352 L300,360 L286,376 Z" fill="url(#boneGrad)" opacity=".5" />
-          <path d="M440,366 Q462,368 466,384 L448,388 Q438,376 440,366 Z" fill="url(#boneGrad)" opacity=".45" />
-          <line x1="455" y1="378" x2="525" y2="455" stroke="url(#boneGrad)" strokeWidth="6" strokeLinecap="round" opacity=".55" />
+        {/* Bones background (Abstract & Clean) */}
+        <g opacity=".85">
+          {/* Ribcage */}
+          <path d="M260,342 Q300,356 300,388" fill="none" stroke="url(#boneGrad)" strokeWidth="3" strokeLinecap="round" opacity=".55" />
+          <path d="M285,344 Q325,358 325,390" fill="none" stroke="url(#boneGrad)" strokeWidth="3" strokeLinecap="round" opacity=".55" />
+          <path d="M310,347 Q350,361 350,392" fill="none" stroke="url(#boneGrad)" strokeWidth="3" strokeLinecap="round" opacity=".55" />
+          <path d="M335,350 Q375,364 375,392" fill="none" stroke="url(#boneGrad)" strokeWidth="3" strokeLinecap="round" opacity=".55" />
+          
+          {/* Clavicle / Sternum connections (Abstract) */}
+          <line x1={S.x} y1={S.y} x2="260" y2="345" stroke="url(#boneGrad)" strokeWidth="4" strokeLinecap="round" opacity=".6" />
+          <line x1="250" y1="340" x2="280" y2="348" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" opacity=".6" />
+          
+          {/* Scapula Abstract */}
+          <path d={`M${S.x - 5},${S.y + 5} L250,380 L230,385 Z`} fill="url(#boneGrad)" opacity=".4" />
+          
+          {/* Pelvis Abstract */}
+          <path d="M420,368 Q442,370 446,386 L428,390 Q418,378 420,368 Z" fill="url(#boneGrad)" opacity=".45" />
+          
+          {/* Leg Bones */}
+          <line x1="435" y1="380" x2="525" y2="455" stroke="url(#boneGrad)" strokeWidth="6" strokeLinecap="round" opacity=".55" />
           <line x1="525" y1="455" x2="505" y2="532" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" opacity=".55" />
           <line x1="505" y1="532" x2="528" y2="538" stroke="url(#boneGrad)" strokeWidth="4" strokeLinecap="round" opacity=".55" />
         </g>
@@ -280,9 +333,7 @@ export default function KinematicScene() {
           <path d={pF1} />
           <path d={pF2} />
           <path d={pF3} />
-          {/* Deltoid Fibers */}
-          <path d={dF1} />
-          <path d={dF2} />
+          {/* Deltoid Fibers Removed */}
         </g>
         
         {/* Muscle Light Highlights */}
@@ -295,12 +346,13 @@ export default function KinematicScene() {
 
         {/* Force & Moment Arm Guidelines */}
         <line x1={Wx} y1="0" x2={Wx} y2="600" strokeWidth="1.5" strokeDasharray="5,5" opacity={gravLineOpacity} className="stroke-red-400 dark:stroke-red-500" />
+        <line x1={S.x} y1={S.y} x2={S.x} y2="305" strokeWidth="1.5" strokeDasharray="4,4" opacity={maLblOpacity} className="stroke-blue-400/50" />
         <g strokeWidth="2" opacity=".75" className="stroke-blue-500 dark:stroke-blue-400">
-          <line x1={S.x} y1="352" x2={Wx} y2="352" />
-          <line x1={S.x} y1="346" x2={S.x} y2="358" />
-          <line x1={Wx} y1="346" x2={Wx} y2="358" />
+          <line x1={S.x} y1="300" x2={Wx} y2="300" />
+          <line x1={S.x} y1="294" x2={S.x} y2="306" />
+          <line x1={Wx} y1="294" x2={Wx} y2="306" />
         </g>
-        <text x={(S.x + Wx) / 2} y="372" fontSize="11" fontFamily="monospace" textAnchor="middle" opacity={maLblOpacity} className="fill-blue-600 dark:fill-blue-400">
+        <text x={(S.x + Wx) / 2} y="290" fontSize="11" fontFamily="monospace" textAnchor="middle" opacity={maLblOpacity} className="fill-blue-600 dark:fill-blue-400">
           brazo de momento
         </text>
 
@@ -323,13 +375,9 @@ export default function KinematicScene() {
         <text x={S.x} y={S.y - 14} fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="middle" className="fill-blue-700 dark:fill-[#00e5ff]">
           {shoulderAngle}°
         </text>
-        
-        <text x={c1.x - 8} y={c1.y + 2} fontSize="12" fontWeight="bold" textAnchor="end" className="fill-zinc-700 dark:fill-[#e8e8e8]">Pectoral mayor</text>
-        <text x={dOrigin2.x - 12} y={dOrigin2.y - 22} fontSize="12" fontWeight="bold" textAnchor="middle" className="fill-zinc-700 dark:fill-[#e8e8e8]">Deltoides ant.</text>
-        <text x={tm.x + bnx * 6 + 8} y={tm.y + bny * 6} fontSize="12" fontWeight="bold" textAnchor="start" className="fill-zinc-700 dark:fill-[#e8e8e8]">Tríceps</text>
 
         {/* Legend */}
-        <g transform="translate(30,548)">
+        <g transform="translate(350,85)">
           <text x="0" y="-6" fontSize="10" fontFamily="monospace" className="fill-zinc-500 dark:fill-[#777]">COLOR DEL CUERPO = DEMANDA / CONTRIBUCIÓN RELATIVA</text>
           <rect x="0" y="0" width="150" height="8" rx="2" fill="url(#legendGrad)" />
           <text x="0" y="22" fontSize="9" fontFamily="monospace" className="fill-zinc-500 dark:fill-[#666]">menor</text>

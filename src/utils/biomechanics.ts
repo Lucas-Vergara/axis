@@ -22,7 +22,7 @@ export interface BiomechanicalMetrics {
 }
 
 // Fixed dimensions based on Liss's design
-export const SHOULDER_POS: Point = { x: 255, y: 352 }; // Fixed shoulder joint
+export const SHOULDER_POS: Point = { x: 225, y: 365 }; // Fixed shoulder joint
 export const L_ARM = 124; // Upper arm length (adjusted for realism)
 export const L_FORE = 108; // Forearm length (adjusted for realism)
 
@@ -51,6 +51,13 @@ export function calculateBiomechanics(p: number): BiomechanicalMetrics {
   let Wx = 0, Wy = 0, Ex = 0, Ey = 0;
   const S = SHOULDER_POS;
 
+  // Calculate dynamic lockout position
+  const Wy_lock = 145;
+  const Ey_lock = Wy_lock + L_FORE;
+  const dy_lock = Ey_lock - S.y;
+  const Ex_lock = S.x + Math.sqrt(Math.max(0, Math.pow(L_ARM, 2) - Math.pow(dy_lock, 2)));
+  const Wx_lock = Ex_lock;
+
   // KINEMATICS IN PHASES (Unrack vs Descent)
   if (p < 0) {
       if (p < -15) {
@@ -61,8 +68,8 @@ export function calculateBiomechanics(p: number): BiomechanicalMetrics {
       } else {
           // Phase 2: Horizontal pull to Lockout
           const t = (p + 15) / 15; 
-          Wx = lerp(220, 280.7, t);
-          Wy = lerp(148, 145, t);
+          Wx = lerp(220, Wx_lock, t);
+          Wy = lerp(148, Wy_lock, t);
       }
       let dist = Math.hypot(Wx - S.x, Wy - S.y);
       dist = clamp(dist, 0.1, L_ARM + L_FORE - 0.1);
@@ -87,7 +94,7 @@ export function calculateBiomechanics(p: number): BiomechanicalMetrics {
   
   // EMG values based on literature (Liss's design)
   const pec = clamp(27 + tqHombro * 4 - 2, 20, 32);
-  const delt = clamp(26 + tqHombro * 3 - 1.5, 20, 30);
+  const delt = clamp(20 + tqHombro * 2, 13, 24);
   const tri = clamp(13 + tqCodo * 7, 13, 20);
 
   // Joint Angles

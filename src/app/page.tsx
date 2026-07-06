@@ -1,7 +1,10 @@
+"use client";
 import React from "react";
-import KinematicScene from "@/components/KinematicScene";
-import TensionPanel from "@/components/TensionPanel";
-import PlaybackControls from "@/components/PlaybackControls";
+import dynamic from "next/dynamic";
+
+const KinematicScene = dynamic(() => import("@/components/KinematicScene"), { ssr: false });
+const TensionPanel = dynamic(() => import("@/components/TensionPanel"), { ssr: false });
+const PlaybackControls = dynamic(() => import("@/components/PlaybackControls"), { ssr: false });
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Brain, Sparkles, BookOpen, GitMerge, Info } from "lucide-react";
 
