@@ -25,19 +25,19 @@ export default function KinematicScene() {
     tri,
   } = metrics;
 
-  const handleStart = (clientY: number) => {
+  const handleStart = (clientX: number) => {
     isDragging.current = true;
     if (isPlaying) {
       setIsPlaying(false);
     }
-    handleMove(clientY);
+    handleMove(clientX);
   };
 
-  const handleMove = (clientY: number) => {
+  const handleMove = (clientX: number) => {
     if (!isDragging.current || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
-    const clickY = ((clientY - rect.top) / rect.height) * 600;
-    const newProgress = ((clickY - 145) / (320 - 145)) * 100;
+    const clickX = ((clientX - rect.left) / rect.width) * 800;
+    const newProgress = ((clickX / 800) * 130) - 30;
     setProgress(Math.max(-30, Math.min(100, newProgress)));
   };
 
@@ -79,36 +79,46 @@ export default function KinematicScene() {
   const fbnx = -fuy;
   const fbny = fux;
 
-  // Triceps logic
+  // ----------------------------------------------------
+  // MUSCLE PATHS AND VOLUMETRIC STRIATIONS (FIBERS)
+  // ----------------------------------------------------
+
+  // Triceps
   const ta = { x: S.x + bnx * 9, y: S.y + bny * 9 };
   const tb = { x: Ex + bnx * 8, y: Ey + bny * 8 };
-  const tm = { x: (ta.x + tb.x) / 2 + bnx * 11, y: (ta.y + tb.y) / 2 + bny * 11 };
+  const tm = { x: (ta.x + tb.x) / 2 + bnx * 12, y: (ta.y + tb.y) / 2 + bny * 12 };
   const ti = { x: (ta.x + tb.x) / 2 + bnx * 1, y: (ta.y + tb.y) / 2 + bny * 1 };
   const mTriPath = `M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y} Q${ti.x},${ti.y} ${ta.x},${ta.y} Z`;
   const mTriHiPath = `M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y}`;
+  const triF1 = `M${ta.x - ux*10},${ta.y - uy*10} Q${tm.x - bnx*3.5},${tm.y - bny*3.5} ${tb.x - ux*5},${tb.y - uy*5}`; // Inter-head sulcus
 
-  // Biceps logic (Anterior to humerus)
+  // Biceps (Anterior)
   const biC1 = { x: S.x - bnx * 6, y: S.y - bny * 6 };
   const biC2 = { x: Ex - bnx * 7, y: Ey - bny * 7 };
-  const biMid = { x: (biC1.x + biC2.x) / 2 - bnx * 15, y: (biC1.y + biC2.y) / 2 - bny * 15 };
+  const biMid = { x: (biC1.x + biC2.x) / 2 - bnx * 16, y: (biC1.y + biC2.y) / 2 - bny * 16 };
   const biIns = { x: (biC1.x + biC2.x) / 2 - bnx * 1, y: (biC1.y + biC2.y) / 2 - bny * 1 };
   const mBicepsPath = `M${biC1.x},${biC1.y} Q${biMid.x},${biMid.y} ${biC2.x},${biC2.y} Q${biIns.x},${biIns.y} ${biC1.x},${biC1.y} Z`;
   const mBicepsHiPath = `M${biC1.x},${biC1.y} Q${biMid.x},${biMid.y} ${biC2.x},${biC2.y}`;
+  const biF1 = `M${biC1.x + ux*10},${biC1.y + uy*10} Q${biMid.x + bnx*5},${biMid.y + bny*5} ${biC2.x - ux*10},${biC2.y - uy*10}`; // Short vs Long head sulcus
 
   // Forearm Volume (Brachioradialis & Flexors)
   const fTopC = { x: Ex - fbnx * 12, y: Ey - fbny * 12 };
   const fBotC = { x: Ex + fbnx * 8, y: Ey + fbny * 8 };
   const fTopW = { x: Wx - fbnx * 5, y: Wy - fbny * 5 };
   const fBotW = { x: Wx + fbnx * 4, y: Wy + fbny * 4 };
-  const fMidT = { x: (fTopC.x + fTopW.x) / 2 - fbnx * 6, y: (fTopC.y + fTopW.y) / 2 - fbny * 6 };
+  const fMidT = { x: (fTopC.x + fTopW.x) / 2 - fbnx * 7, y: (fTopC.y + fTopW.y) / 2 - fbny * 7 };
   const fMidB = { x: (fBotC.x + fBotW.x) / 2 + fbnx * 4, y: (fBotC.y + fBotW.y) / 2 + fbny * 4 };
   const mForearmPath = `M${fTopC.x},${fTopC.y} Q${fMidT.x},${fMidT.y} ${fTopW.x},${fTopW.y} L${fBotW.x},${fBotW.y} Q${fMidB.x},${fMidB.y} ${fBotC.x},${fBotC.y} Z`;
   const mForearmHiPath = `M${fTopC.x},${fTopC.y} Q${fMidT.x},${fMidT.y} ${fTopW.x},${fTopW.y}`;
+  const foreF1 = `M${Ex - fbnx*6 + fux*10},${Ey - fbny*6 + fuy*10} Q${fMidT.x + fbnx*4},${fMidT.y + fbny*4} ${Wx - fux*10},${Wy - fuy*10}`; // Brachioradialis separation
 
-  // Deltoid logic
-  const dcx = S.x + ux * 4 + pnx * 3;
-  const dcy = S.y + uy * 4 + pny * 3;
-  const deltRot = Math.atan2(uy, ux) * 180 / Math.PI;
+  // Deltoid (Teardrop shape)
+  const dOrigin1 = { x: S.x + pnx * 14, y: S.y + pny * 14 }; // clavicle side
+  const dOrigin2 = { x: S.x - ux * 16 - pnx * 2, y: S.y - uy * 16 - pny * 2 }; // acromion side
+  const dIns = { x: S.x + ux * 36 + pnx * 7, y: S.y + uy * 36 + pny * 7 }; // deltoid tuberosity
+  const mDeltPath = `M${dOrigin1.x},${dOrigin1.y} Q${S.x + pnx*28 - ux*10},${S.y + pny*28 - uy*10} ${dOrigin2.x},${dOrigin2.y} Q${S.x + ux*15 - pnx*6},${S.y + uy*15 - pny*6} ${dIns.x},${dIns.y} Q${S.x + ux*20 + pnx*22},${S.y + uy*20 + pny*22} ${dOrigin1.x},${dOrigin1.y} Z`;
+  const dF1 = `M${dOrigin2.x + ux*8},${dOrigin2.y + uy*8} Q${S.x + ux*20 + pnx*6},${S.y + uy*20 + pny*6} ${dIns.x - ux*4},${dIns.y - uy*4}`; // Ant/Lat head separator
+  const dF2 = `M${(dOrigin1.x + dOrigin2.x)/2 + ux*5},${(dOrigin1.y + dOrigin2.y)/2 + uy*5} Q${S.x + ux*18 + pnx*16},${S.y + uy*18 + pny*16} ${dIns.x - ux*6},${dIns.y - uy*6}`;
 
   // Pectoral logic
   const c1 = { x: 236, y: 334 };
@@ -116,6 +126,9 @@ export default function KinematicScene() {
   const ins = { x: S.x + ux * 24 + pnx * 5, y: S.y + uy * 24 + pny * 5 };
   const mPecPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y} Q${(c2.x + ins.x) / 2},${(c2.y + ins.y) / 2 + 4} ${c2.x},${c2.y} Q${(c1.x + c2.x) / 2 - 4},${(c1.y + c2.y) / 2} ${c1.x},${c1.y} Z`;
   const mPecHiPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y}`;
+  const pF1 = `M${ins.x - ux*4},${ins.y - uy*4} Q${(c1.x + ins.x)/2 + 2},${(c1.y + ins.y)/2 - 8} ${c1.x + 8},${c1.y + 6}`; // Clavicular fibers
+  const pF2 = `M${ins.x - ux*4},${ins.y - uy*4} Q${(c1.x + ins.x)/2 + 8},${(c1.y + ins.y)/2 - 1} ${c1.x + 11},${c1.y + 14}`; // Sternal fibers
+  const pF3 = `M${ins.x - ux*4},${ins.y - uy*4} Q${(c2.x + ins.x)/2 - 2},${(c2.y + ins.y)/2} ${c2.x - 4},${c2.y - 6}`; // Costal fibers
 
   // Condyle Bones styling
   const humerusPath = `
@@ -142,15 +155,15 @@ export default function KinematicScene() {
         ref={svgRef}
         viewBox="0 0 800 600"
         preserveAspectRatio="xMidYMid meet"
-        onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientY); }}
-        onMouseMove={(e) => { e.preventDefault(); handleMove(e.clientY); }}
+        onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientX); }}
+        onMouseMove={(e) => { e.preventDefault(); handleMove(e.clientX); }}
         onMouseUp={handleEnd}
         onMouseLeave={handleEnd}
-        onTouchStart={(e) => { handleStart(e.touches[0].clientY); }}
-        onTouchMove={(e) => { handleMove(e.touches[0].clientY); }}
+        onTouchStart={(e) => { handleStart(e.touches[0].clientX); }}
+        onTouchMove={(e) => { handleMove(e.touches[0].clientX); }}
         onTouchEnd={handleEnd}
         onTouchCancel={handleEnd}
-        className="w-full h-full select-none cursor-row-resize touch-none"
+        className="w-full h-full select-none cursor-pointer touch-none"
       >
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -168,6 +181,8 @@ export default function KinematicScene() {
             <stop offset="0" stopColor="#efe7d4" />
             <stop offset="1" stopColor="#c9bda2" />
           </linearGradient>
+          
+          {/* Base muscle blur */}
           <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
             <feGaussianBlur stdDeviation="3.2" result="b" />
             <feMerge>
@@ -175,6 +190,17 @@ export default function KinematicScene() {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          
+          {/* Drop shadow for 3D Muscle Volumes */}
+          <filter id="muscleVol" x="-40%" y="-40%" width="180%" height="180%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#000" floodOpacity="0.35" result="shadow" />
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1" result="softEdge" />
+            <feMerge>
+              <feMergeNode in="shadow" />
+              <feMergeNode in="softEdge" />
+            </feMerge>
+          </filter>
+
           <linearGradient id="legendGrad" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0" stopColor="rgb(43,108,176)" />
             <stop offset=".5" stopColor="rgb(224,165,46)" />
@@ -235,18 +261,37 @@ export default function KinematicScene() {
         <path d={humerusPath} fill="url(#boneGrad)" stroke="#a1947b" strokeWidth="1.5" opacity=".9" />
         <path d={radiusPath} fill="url(#boneGrad)" stroke="#a1947b" strokeWidth="1.5" opacity=".9" />
         
-        {/* Dynamic Muscles (Biceps, Forearm, Triceps, Pec, Delt) */}
-        <path d={mForearmPath} fill={relaxedColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
-        <path d={mBicepsPath} fill={relaxedColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
-        <path d={mTriPath} fill={triColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
-        <path d={mPecPath} fill={pecColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
-        <ellipse cx={dcx} cy={dcy} rx={18} ry={15} transform={`rotate(${deltRot} ${dcx} ${dcy})`} fill={deltColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
+        {/* Dynamic Muscles (With Shadows for Volume) */}
+        <path d={mForearmPath} fill={relaxedColor} filter="url(#muscleVol)" strokeWidth="1" className="stroke-black/10 dark:stroke-black/30 transition-colors duration-150" />
+        <path d={mBicepsPath} fill={relaxedColor} filter="url(#muscleVol)" strokeWidth="1" className="stroke-black/10 dark:stroke-black/30 transition-colors duration-150" />
+        <path d={mTriPath} fill={triColor} filter="url(#muscleVol)" strokeWidth="1" className="stroke-black/10 dark:stroke-black/30 transition-colors duration-150" />
+        <path d={mPecPath} fill={pecColor} filter="url(#muscleVol)" strokeWidth="1" className="stroke-black/10 dark:stroke-black/30 transition-colors duration-150" />
+        <path d={mDeltPath} fill={deltColor} filter="url(#muscleVol)" strokeWidth="1" className="stroke-black/10 dark:stroke-black/30 transition-colors duration-150" />
         
-        {/* Muscle Highlights */}
-        <path d={mForearmHiPath} fill="none" strokeWidth="2" opacity=".1" className="stroke-white" />
-        <path d={mBicepsHiPath} fill="none" strokeWidth="2" opacity=".1" className="stroke-white" />
-        <path d={mTriHiPath} fill="none" strokeWidth="2" opacity=".12" className="stroke-white" />
-        <path d={mPecHiPath} fill="none" strokeWidth="2" opacity=".12" className="stroke-white" />
+        {/* Muscle Fibers & Striations (Dark Sulcus) */}
+        <g fill="none" strokeWidth="2.5" className="stroke-black/25 dark:stroke-black/40" filter="url(#soft)">
+          {/* Forearm Striation */}
+          <path d={foreF1} />
+          {/* Biceps Striation */}
+          <path d={biF1} />
+          {/* Triceps Striation */}
+          <path d={triF1} />
+          {/* Pectoral Fibers */}
+          <path d={pF1} />
+          <path d={pF2} />
+          <path d={pF3} />
+          {/* Deltoid Fibers */}
+          <path d={dF1} />
+          <path d={dF2} />
+        </g>
+        
+        {/* Muscle Light Highlights */}
+        <g fill="none" strokeWidth="2" opacity=".12" className="stroke-white">
+          <path d={mForearmHiPath} />
+          <path d={mBicepsHiPath} />
+          <path d={mTriHiPath} />
+          <path d={mPecHiPath} />
+        </g>
 
         {/* Force & Moment Arm Guidelines */}
         <line x1={Wx} y1="0" x2={Wx} y2="600" strokeWidth="1.5" strokeDasharray="5,5" opacity={gravLineOpacity} className="stroke-red-400 dark:stroke-red-500" />
@@ -280,7 +325,7 @@ export default function KinematicScene() {
         </text>
         
         <text x={c1.x - 8} y={c1.y + 2} fontSize="12" fontWeight="bold" textAnchor="end" className="fill-zinc-700 dark:fill-[#e8e8e8]">Pectoral mayor</text>
-        <text x={dcx} y={dcy - 22} fontSize="12" fontWeight="bold" textAnchor="middle" className="fill-zinc-700 dark:fill-[#e8e8e8]">Deltoides ant.</text>
+        <text x={dOrigin2.x - 12} y={dOrigin2.y - 22} fontSize="12" fontWeight="bold" textAnchor="middle" className="fill-zinc-700 dark:fill-[#e8e8e8]">Deltoides ant.</text>
         <text x={tm.x + bnx * 6 + 8} y={tm.y + bny * 6} fontSize="12" fontWeight="bold" textAnchor="start" className="fill-zinc-700 dark:fill-[#e8e8e8]">Tríceps</text>
 
         {/* Legend */}
