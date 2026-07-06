@@ -23,8 +23,8 @@ export interface BiomechanicalMetrics {
 
 // Fixed dimensions based on Liss's design
 export const SHOULDER_POS: Point = { x: 255, y: 352 }; // Fixed shoulder joint
-export const L_ARM = 112; // Upper arm length
-export const L_FORE = 98; // Forearm length
+export const L_ARM = 124; // Upper arm length (adjusted for realism)
+export const L_FORE = 108; // Forearm length (adjusted for realism)
 
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;

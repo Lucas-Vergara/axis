@@ -45,9 +45,13 @@ export default function KinematicScene() {
     isDragging.current = false;
   };
 
+  // Active muscle colors
   const pecColor = getMuscleColor(pec, 20, 32);
   const deltColor = getMuscleColor(delt, 20, 30);
   const triColor = getMuscleColor(tri, 13, 20);
+  
+  // Relaxed muscle color for antagonist/neutral (Biceps, Forearm)
+  const relaxedColor = getMuscleColor(0, 0, 100); 
 
   const S = shoulder;
   const Ex = elbow.x;
@@ -55,6 +59,7 @@ export default function KinematicScene() {
   const Wx = wrist.x;
   const Wy = wrist.y;
   
+  // Humerus vectors
   const hx = Ex - S.x;
   const hy = Ey - S.y;
   const hl = Math.hypot(hx, hy) || 1;
@@ -65,22 +70,68 @@ export default function KinematicScene() {
   const bnx = -uy;
   const bny = ux;
 
+  // Forearm vectors
+  const fx = Wx - Ex;
+  const fy = Wy - Ey;
+  const fl = Math.hypot(fx, fy) || 1;
+  const fux = fx / fl;
+  const fuy = fy / fl;
+  const fbnx = -fuy;
+  const fbny = fux;
+
+  // Triceps logic
   const ta = { x: S.x + bnx * 9, y: S.y + bny * 9 };
-  const tb = { x: Ex + bnx * 7, y: Ey + bny * 7 };
+  const tb = { x: Ex + bnx * 8, y: Ey + bny * 8 };
   const tm = { x: (ta.x + tb.x) / 2 + bnx * 11, y: (ta.y + tb.y) / 2 + bny * 11 };
   const ti = { x: (ta.x + tb.x) / 2 + bnx * 1, y: (ta.y + tb.y) / 2 + bny * 1 };
   const mTriPath = `M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y} Q${ti.x},${ti.y} ${ta.x},${ta.y} Z`;
   const mTriHiPath = `M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y}`;
 
+  // Biceps logic (Anterior to humerus)
+  const biC1 = { x: S.x - bnx * 6, y: S.y - bny * 6 };
+  const biC2 = { x: Ex - bnx * 7, y: Ey - bny * 7 };
+  const biMid = { x: (biC1.x + biC2.x) / 2 - bnx * 15, y: (biC1.y + biC2.y) / 2 - bny * 15 };
+  const biIns = { x: (biC1.x + biC2.x) / 2 - bnx * 1, y: (biC1.y + biC2.y) / 2 - bny * 1 };
+  const mBicepsPath = `M${biC1.x},${biC1.y} Q${biMid.x},${biMid.y} ${biC2.x},${biC2.y} Q${biIns.x},${biIns.y} ${biC1.x},${biC1.y} Z`;
+  const mBicepsHiPath = `M${biC1.x},${biC1.y} Q${biMid.x},${biMid.y} ${biC2.x},${biC2.y}`;
+
+  // Forearm Volume (Brachioradialis & Flexors)
+  const fTopC = { x: Ex - fbnx * 12, y: Ey - fbny * 12 };
+  const fBotC = { x: Ex + fbnx * 8, y: Ey + fbny * 8 };
+  const fTopW = { x: Wx - fbnx * 5, y: Wy - fbny * 5 };
+  const fBotW = { x: Wx + fbnx * 4, y: Wy + fbny * 4 };
+  const fMidT = { x: (fTopC.x + fTopW.x) / 2 - fbnx * 6, y: (fTopC.y + fTopW.y) / 2 - fbny * 6 };
+  const fMidB = { x: (fBotC.x + fBotW.x) / 2 + fbnx * 4, y: (fBotC.y + fBotW.y) / 2 + fbny * 4 };
+  const mForearmPath = `M${fTopC.x},${fTopC.y} Q${fMidT.x},${fMidT.y} ${fTopW.x},${fTopW.y} L${fBotW.x},${fBotW.y} Q${fMidB.x},${fMidB.y} ${fBotC.x},${fBotC.y} Z`;
+  const mForearmHiPath = `M${fTopC.x},${fTopC.y} Q${fMidT.x},${fMidT.y} ${fTopW.x},${fTopW.y}`;
+
+  // Deltoid logic
   const dcx = S.x + ux * 4 + pnx * 3;
   const dcy = S.y + uy * 4 + pny * 3;
   const deltRot = Math.atan2(uy, ux) * 180 / Math.PI;
 
+  // Pectoral logic
   const c1 = { x: 236, y: 334 };
   const c2 = { x: 250, y: 362 };
   const ins = { x: S.x + ux * 24 + pnx * 5, y: S.y + uy * 24 + pny * 5 };
   const mPecPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y} Q${(c2.x + ins.x) / 2},${(c2.y + ins.y) / 2 + 4} ${c2.x},${c2.y} Q${(c1.x + c2.x) / 2 - 4},${(c1.y + c2.y) / 2} ${c1.x},${c1.y} Z`;
   const mPecHiPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y}`;
+
+  // Condyle Bones styling
+  const humerusPath = `
+    M${S.x - bnx * 4},${S.y - bny * 4} 
+    L${Ex - bnx * 3},${Ey - bny * 3}
+    A4,4 0 0,0 ${Ex + bnx * 3},${Ey + bny * 3}
+    L${S.x + bnx * 4},${S.y + bny * 4}
+    A4,4 0 0,0 ${S.x - bnx * 4},${S.y - bny * 4} Z
+  `;
+  const radiusPath = `
+    M${Ex - fbnx * 3.5},${Ey - fbny * 3.5} 
+    L${Wx - fbnx * 2.5},${Wy - fbny * 2.5}
+    A3,3 0 0,0 ${Wx + fbnx * 2.5},${Wy + fbny * 2.5}
+    L${Ex + fbnx * 3.5},${Ey + fbny * 3.5}
+    A4,4 0 0,0 ${Ex - fbnx * 3.5},${Ey - fbny * 3.5} Z
+  `;
 
   const gravLineOpacity = 0.5;
   const maLblOpacity = Math.abs(Wx - S.x) > 34 ? 0.85 : 0;
@@ -155,7 +206,7 @@ export default function KinematicScene() {
         <rect x="450" y="407" width="30" height="140" className="fill-zinc-200 dark:fill-[#151515]" />
         <rect x="120" y="542" width="400" height="9" rx="3" className="fill-zinc-200 dark:fill-[#1a1a1a]" />
 
-        {/* Skin Silhouettes (Use dark gradient fallback if simple dark/light switch is complex for url IDs, but CSS custom props is better. We'll use currentColor trick or separate components if needed. Actually we can style 'style={{fill: "var(--skin-fill)"}}' but for now, we leave the gradient as is and change stroke). */}
+        {/* Skin Silhouettes */}
         <g className="dark:hidden">
           <path d="M188,356 Q214,322 262,332 Q332,340 402,350 Q452,356 470,365 Q530,375 540,460 Q540,500 520,530 L540,535 L540,542 L485,542 L490,530 Q490,490 510,460 Q470,410 460,392 Q402,399 300,397 Q222,397 188,388 Z" fill="url(#skinLight)" opacity=".7" stroke="#bda28b" strokeWidth="1.5" />
           <path d="M175,356 Q168,326 142,330 Q118,336 122,360 Q126,384 156,384 Q178,382 188,368 Z" fill="url(#skinLight)" opacity=".7" stroke="#bda28b" strokeWidth="1.5" />
@@ -180,16 +231,20 @@ export default function KinematicScene() {
           <line x1="505" y1="532" x2="528" y2="538" stroke="url(#boneGrad)" strokeWidth="4" strokeLinecap="round" opacity=".55" />
         </g>
 
-        {/* Dynamic Arm Bones */}
-        <line x1={S.x} y1={S.y} x2={Ex} y2={Ey} stroke="url(#boneGrad)" strokeWidth="7" strokeLinecap="round" />
-        <line x1={Ex} y1={Ey} x2={Wx} y2={Wy} stroke="url(#boneGrad)" strokeWidth="6" strokeLinecap="round" />
+        {/* Dynamic Arm Bones (Realistic Shapes) */}
+        <path d={humerusPath} fill="url(#boneGrad)" stroke="#a1947b" strokeWidth="1.5" opacity=".9" />
+        <path d={radiusPath} fill="url(#boneGrad)" stroke="#a1947b" strokeWidth="1.5" opacity=".9" />
         
-        {/* Dynamic Muscles */}
+        {/* Dynamic Muscles (Biceps, Forearm, Triceps, Pec, Delt) */}
+        <path d={mForearmPath} fill={relaxedColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
+        <path d={mBicepsPath} fill={relaxedColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
         <path d={mTriPath} fill={triColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
         <path d={mPecPath} fill={pecColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
         <ellipse cx={dcx} cy={dcy} rx={18} ry={15} transform={`rotate(${deltRot} ${dcx} ${dcy})`} fill={deltColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
         
         {/* Muscle Highlights */}
+        <path d={mForearmHiPath} fill="none" strokeWidth="2" opacity=".1" className="stroke-white" />
+        <path d={mBicepsHiPath} fill="none" strokeWidth="2" opacity=".1" className="stroke-white" />
         <path d={mTriHiPath} fill="none" strokeWidth="2" opacity=".12" className="stroke-white" />
         <path d={mPecHiPath} fill="none" strokeWidth="2" opacity=".12" className="stroke-white" />
 
