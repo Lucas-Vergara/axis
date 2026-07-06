@@ -16,10 +16,9 @@ export default function PlaybackControls() {
   } = useSimulationStore();
 
   const animationRef = useRef<number | null>(null);
-  const directionRef = useRef<number>(1); // 1 = down (-30 to 100), -1 = up (100 to -30)
+  const directionRef = useRef<number>(1); 
   const lastTimeRef = useRef<number>(0);
 
-  // Synchronize dynamic loops with requestAnimationFrame
   useEffect(() => {
     if (!isPlaying) {
       if (animationRef.current) {
@@ -34,20 +33,18 @@ export default function PlaybackControls() {
       const deltaTime = time - lastTimeRef.current;
       lastTimeRef.current = time;
 
-      // Base: a full rep (-30 to 100) takes approx 3000ms at 1x speed.
       const unitsPerMs = 0.067 * speed;
       const progressDelta = deltaTime * unitsPerMs;
 
       setProgress((prevProgress) => {
         let nextProgress = prevProgress + directionRef.current * progressDelta;
 
-        // Bounce at boundaries to create a continuous fluid cycle
         if (nextProgress >= 100) {
           nextProgress = 100;
-          directionRef.current = -1; // reverse to up
+          directionRef.current = -1; 
         } else if (nextProgress <= -30) {
           nextProgress = -30;
-          directionRef.current = 1; // reverse to down
+          directionRef.current = 1; 
         }
 
         return nextProgress;
@@ -66,16 +63,13 @@ export default function PlaybackControls() {
     };
   }, [isPlaying, speed, setProgress]);
 
-  // Handle Play/Pause toggle
   const togglePlay = () => {
     setIsPlaying(!isPlaying);
   };
 
-  // Handle slider change manually
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     setProgress(val);
-    // Pause on manual scrub for fine-grained inspection
     if (isPlaying) setIsPlaying(false);
   };
 
@@ -86,17 +80,16 @@ export default function PlaybackControls() {
     return `Descenso Excéntrico (${Math.round(progress)}%)`;
   };
 
-  // Compute slider background gradient percentage (since it starts at -30)
   const sliderPercentage = ((progress + 30) / 130) * 100;
 
   return (
-    <div className="w-full p-5 bg-[#121212] rounded-xl border border-neutral-800 flex flex-col gap-4">
+    <div className="w-full p-5 bg-white dark:bg-[#121212] rounded-xl border border-zinc-200 dark:border-neutral-800 flex flex-col gap-4 shadow-xl transition-colors duration-300">
       {/* Slider Progress Bar */}
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between text-xs text-gray-400 font-semibold px-1">
+        <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-gray-400 font-semibold px-1">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#ef5350] animate-pulse" />
-            Fase actual: <span className="text-gray-300">{getPhaseName()}</span>
+            Fase actual: <span className="text-zinc-800 dark:text-gray-300">{getPhaseName()}</span>
           </span>
           <span className="font-mono text-[#ef5350] font-bold">
             {progress < 0 ? Math.round(progress) + "%" : "+" + Math.round(progress) + "%"}
@@ -111,14 +104,14 @@ export default function PlaybackControls() {
             step="1"
             value={progress}
             onChange={handleSliderChange}
-            className="w-full h-2.5 bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer border border-[#222] outline-none accent-[#ef5350] hover:accent-red-400 transition-colors"
+            className="w-full h-2.5 bg-zinc-200 dark:bg-[#0a0a0a] rounded-lg appearance-none cursor-pointer border border-zinc-300 dark:border-[#222] outline-none accent-[#ef5350] hover:accent-red-400 transition-colors"
             style={{
-              background: `linear-gradient(to right, #ef535044 0%, #ef5350 ${sliderPercentage}%, #0a0a0a ${sliderPercentage}%, #0a0a0a 100%)`,
+              background: `linear-gradient(to right, #ef535044 0%, #ef5350 ${sliderPercentage}%, var(--color-track, transparent) ${sliderPercentage}%, var(--color-track, transparent) 100%)`,
             }}
           />
         </div>
 
-        <div className="flex justify-between text-[10px] text-gray-500 font-bold tracking-widest px-1 uppercase">
+        <div className="flex justify-between text-[10px] text-zinc-500 dark:text-gray-500 font-bold tracking-widest px-1 uppercase">
           <span>Soporte</span>
           <span>Lockout</span>
           <span>Pecho</span>
@@ -126,7 +119,7 @@ export default function PlaybackControls() {
       </div>
 
       {/* Control Buttons and Speed Panel */}
-      <div className="flex flex-col xl:flex-row items-center justify-between gap-4 pt-4 border-t border-neutral-800">
+      <div className="flex flex-col xl:flex-row items-center justify-between gap-4 pt-4 border-t border-zinc-200 dark:border-neutral-800">
         
         {/* Playback Buttons */}
         <div className="flex items-center gap-2 w-full xl:w-auto justify-between xl:justify-start">
@@ -135,8 +128,8 @@ export default function PlaybackControls() {
               onClick={togglePlay}
               className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold tracking-wide uppercase transition-all duration-200 cursor-pointer shadow-md select-none border ${
                 isPlaying
-                  ? "bg-neutral-800 text-gray-100 hover:bg-neutral-700 border-neutral-700"
-                  : "bg-[#00e5ff] text-[#0a0a0a] hover:bg-cyan-400 hover:scale-[1.03] active:scale-[0.98] border-[#00e5ff] hover:shadow-cyan-500/20 shadow-cyan-500/10"
+                  ? "bg-zinc-100 dark:bg-neutral-800 text-zinc-900 dark:text-gray-100 hover:bg-zinc-200 dark:hover:bg-neutral-700 border-zinc-300 dark:border-neutral-700"
+                  : "bg-blue-500 dark:bg-[#00e5ff] text-white dark:text-[#0a0a0a] hover:bg-blue-600 dark:hover:bg-cyan-400 hover:scale-[1.03] active:scale-[0.98] border-blue-500 dark:border-[#00e5ff] hover:shadow-blue-500/20 dark:hover:shadow-cyan-500/20 shadow-blue-500/10 dark:shadow-cyan-500/10"
               }`}
             >
               {isPlaying ? (
@@ -146,7 +139,7 @@ export default function PlaybackControls() {
                 </>
               ) : (
                 <>
-                  <Play className="w-4 h-4 fill-[#0a0a0a]" />
+                  <Play className={`w-4 h-4 ${isPlaying ? '' : 'fill-white dark:fill-[#0a0a0a]'}`} />
                   Simular
                 </>
               )}
@@ -157,7 +150,7 @@ export default function PlaybackControls() {
                 reset();
                 directionRef.current = 1;
               }}
-              className="flex items-center justify-center p-2.5 rounded-xl bg-[#0a0a0a] hover:bg-[#151515] border border-[#222] hover:border-[#333] text-gray-400 hover:text-gray-200 transition-all duration-150 cursor-pointer"
+              className="flex items-center justify-center p-2.5 rounded-xl bg-zinc-100 dark:bg-[#0a0a0a] hover:bg-zinc-200 dark:hover:bg-[#151515] border border-zinc-300 dark:border-[#222] text-zinc-600 dark:text-gray-400 hover:text-zinc-900 dark:hover:text-gray-200 transition-all duration-150 cursor-pointer"
               title="Reiniciar Simulación"
             >
               <RotateCcw className="w-4 h-4" />
@@ -166,9 +159,9 @@ export default function PlaybackControls() {
         </div>
 
         {/* Slow Motion Selector */}
-        <div className="flex items-center justify-between xl:justify-start gap-2.5 bg-[#0a0a0a] p-1.5 rounded-xl border border-[#222] w-full xl:w-auto">
-          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-extrabold pl-2 flex items-center gap-1">
-            <FastForward className="w-3 h-3 text-gray-500" />
+        <div className="flex items-center justify-between xl:justify-start gap-2.5 bg-zinc-100 dark:bg-[#0a0a0a] p-1.5 rounded-xl border border-zinc-200 dark:border-[#222] w-full xl:w-auto">
+          <span className="text-[10px] text-zinc-500 dark:text-gray-500 uppercase tracking-widest font-extrabold pl-2 flex items-center gap-1">
+            <FastForward className="w-3 h-3 text-zinc-500 dark:text-gray-500" />
             Velocidad
           </span>
           <div className="flex items-center gap-1">
@@ -178,8 +171,8 @@ export default function PlaybackControls() {
                 onClick={() => setSpeed(s)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-black tracking-wide font-mono transition-all duration-150 cursor-pointer ${
                   speed === s
-                    ? "bg-[#151515] text-[#00e5ff] border border-[#00e5ff]/30 shadow-md"
-                    : "text-gray-500 hover:text-gray-300 border border-transparent hover:bg-[#151515]"
+                    ? "bg-white dark:bg-[#151515] text-blue-600 dark:text-[#00e5ff] border border-blue-200 dark:border-[#00e5ff]/30 shadow-md"
+                    : "text-zinc-500 dark:text-gray-500 hover:text-zinc-900 dark:hover:text-gray-300 border border-transparent hover:bg-white dark:hover:bg-[#151515]"
                 }`}
               >
                 {s === 1.0 ? "1x" : s === 0.5 ? "0.5x" : "0.25x"}

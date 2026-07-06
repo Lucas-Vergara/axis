@@ -13,7 +13,6 @@ export default function KinematicScene() {
   const svgRef = useRef<SVGSVGElement>(null);
   const isDragging = useRef(false);
 
-  // Calculate all biomechanical coordinates and angles
   const metrics = calculateBiomechanics(progress);
   const {
     jointPositions: { shoulder, elbow, wrist, barbell },
@@ -26,7 +25,6 @@ export default function KinematicScene() {
     tri,
   } = metrics;
 
-  // Drag handlers for direct screen scrubbing
   const handleStart = (clientY: number) => {
     isDragging.current = true;
     if (isPlaying) {
@@ -38,12 +36,7 @@ export default function KinematicScene() {
   const handleMove = (clientY: number) => {
     if (!isDragging.current || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
-    
-    // Scale clientY to SVG viewBox coordinates (viewBox height is 600)
     const clickY = ((clientY - rect.top) / rect.height) * 600;
-    
-    // Y range for barbell from racked/unracked (148/145) to chest (320)
-    // Approximate mapping for user drag UX
     const newProgress = ((clickY - 145) / (320 - 145)) * 100;
     setProgress(Math.max(-30, Math.min(100, newProgress)));
   };
@@ -52,12 +45,10 @@ export default function KinematicScene() {
     isDragging.current = false;
   };
 
-  // Muscle color codes
   const pecColor = getMuscleColor(pec, 20, 32);
   const deltColor = getMuscleColor(delt, 20, 30);
   const triColor = getMuscleColor(tri, 13, 20);
 
-  // Vectors for muscles (Same logic as Liss HTML script)
   const S = shoulder;
   const Ex = elbow.x;
   const Ey = elbow.y;
@@ -74,7 +65,6 @@ export default function KinematicScene() {
   const bnx = -uy;
   const bny = ux;
 
-  // Triceps logic
   const ta = { x: S.x + bnx * 9, y: S.y + bny * 9 };
   const tb = { x: Ex + bnx * 7, y: Ey + bny * 7 };
   const tm = { x: (ta.x + tb.x) / 2 + bnx * 11, y: (ta.y + tb.y) / 2 + bny * 11 };
@@ -82,25 +72,21 @@ export default function KinematicScene() {
   const mTriPath = `M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y} Q${ti.x},${ti.y} ${ta.x},${ta.y} Z`;
   const mTriHiPath = `M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y}`;
 
-  // Deltoid logic
   const dcx = S.x + ux * 4 + pnx * 3;
   const dcy = S.y + uy * 4 + pny * 3;
   const deltRot = Math.atan2(uy, ux) * 180 / Math.PI;
 
-  // Pectoral logic
   const c1 = { x: 236, y: 334 };
   const c2 = { x: 250, y: 362 };
   const ins = { x: S.x + ux * 24 + pnx * 5, y: S.y + uy * 24 + pny * 5 };
   const mPecPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y} Q${(c2.x + ins.x) / 2},${(c2.y + ins.y) / 2 + 4} ${c2.x},${c2.y} Q${(c1.x + c2.x) / 2 - 4},${(c1.y + c2.y) / 2} ${c1.x},${c1.y} Z`;
   const mPecHiPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y}`;
 
-  // Math variables outside JSX to prevent Turbopack parsing issues
   const gravLineOpacity = 0.5;
   const maLblOpacity = Math.abs(Wx - S.x) > 34 ? 0.85 : 0;
-  const isLateralView = true;
 
   return (
-    <div className="w-full flex-1 relative flex items-center justify-center bg-[#111] rounded-xl border border-neutral-800 overflow-hidden shadow-2xl h-full">
+    <div className="w-full flex-1 relative flex items-center justify-center bg-white dark:bg-[#111] rounded-2xl border border-zinc-200 dark:border-neutral-800 overflow-hidden shadow-xl h-full transition-colors duration-300">
       <svg
         ref={svgRef}
         viewBox="0 0 800 600"
@@ -117,8 +103,12 @@ export default function KinematicScene() {
       >
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1f1f1f" strokeWidth="1" strokeDasharray="4,4" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" strokeWidth="1" strokeDasharray="4,4" className="stroke-zinc-100 dark:stroke-[#1f1f1f]" />
           </pattern>
+          <linearGradient id="skinLight" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#e5d4c8" />
+            <stop offset="1" stopColor="#d1bea9" />
+          </linearGradient>
           <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#5a4a44" />
             <stop offset="1" stopColor="#3a2f2c" />
@@ -143,29 +133,37 @@ export default function KinematicScene() {
 
         <rect width="100%" height="100%" fill="url(#grid)" />
 
+        {/* Power Rack */}
         <g id="powerRack" opacity="0.95">
-          <rect x="140" y="540" width="120" height="11" fill="#121212" stroke="#222" strokeWidth="2" rx="2" />
-          <rect x="180" y="80" width="28" height="462" fill="#151515" stroke="#222" strokeWidth="2" />
-          <rect x="198" y="82" width="4" height="458" fill="#1f1f1f" />
-          <g fill="#080808">
+          <rect x="140" y="540" width="120" height="11" strokeWidth="2" rx="2" className="fill-zinc-200 dark:fill-[#121212] stroke-zinc-300 dark:stroke-[#222]" />
+          <rect x="180" y="80" width="28" height="462" strokeWidth="2" className="fill-zinc-100 dark:fill-[#151515] stroke-zinc-300 dark:stroke-[#222]" />
+          <rect x="198" y="82" width="4" height="458" className="fill-zinc-200 dark:fill-[#1f1f1f]" />
+          <g className="fill-zinc-400 dark:fill-[#080808]">
             {Array.from({ length: 18 }).map((_, i) => (
               <circle key={i} cx="194" cy={110 + i * 20} r="3.5" />
             ))}
           </g>
-          <path d="M 180 320 L 380 320 L 380 336 L 180 336 Z" fill="#151515" stroke="#262626" strokeWidth="2" />
-          <rect x="208" y="318" width="168" height="4" fill="#050505" />
-          <path d="M 180 125 L 200 125 L 200 187 L 246 187 L 246 160 L 256 160 L 256 197 L 180 197 Z" fill="#151515" stroke="#262626" strokeWidth="2" />
-          <path d="M 198 125 L 202 125 L 202 185 L 244 185 L 244 160 L 248 160 L 248 189 L 198 189 Z" fill="#050505" />
+          <path d="M 180 320 L 380 320 L 380 336 L 180 336 Z" strokeWidth="2" className="fill-zinc-100 dark:fill-[#151515] stroke-zinc-300 dark:stroke-[#262626]" />
+          <rect x="208" y="318" width="168" height="4" className="fill-zinc-300 dark:fill-[#050505]" />
+          <path d="M 180 125 L 200 125 L 200 187 L 246 187 L 246 160 L 256 160 L 256 197 L 180 197 Z" strokeWidth="2" className="fill-zinc-100 dark:fill-[#151515] stroke-zinc-300 dark:stroke-[#262626]" />
+          <path d="M 198 125 L 202 125 L 202 185 L 244 185 L 244 160 L 248 160 L 248 189 L 198 189 Z" className="fill-zinc-300 dark:fill-[#050505]" />
         </g>
 
-        <rect x="90" y="392" width="440" height="15" fill="#1c1c1c" rx="5" stroke="#2a2a2a" strokeWidth="2" />
-        <rect x="150" y="407" width="30" height="140" fill="#151515" />
-        <rect x="450" y="407" width="30" height="140" fill="#151515" />
-        <rect x="120" y="542" width="400" height="9" fill="#1a1a1a" rx="3" />
+        {/* Bench Elements */}
+        <rect x="90" y="392" width="440" height="15" rx="5" strokeWidth="2" className="fill-zinc-100 dark:fill-[#1c1c1c] stroke-zinc-300 dark:stroke-[#2a2a2a]" />
+        <rect x="150" y="407" width="30" height="140" className="fill-zinc-200 dark:fill-[#151515]" />
+        <rect x="450" y="407" width="30" height="140" className="fill-zinc-200 dark:fill-[#151515]" />
+        <rect x="120" y="542" width="400" height="9" rx="3" className="fill-zinc-200 dark:fill-[#1a1a1a]" />
 
-        {/* Skin Silhouettes */}
-        <path d="M188,356 Q214,322 262,332 Q332,340 402,350 Q452,356 470,365 Q530,375 540,460 Q540,500 520,530 L540,535 L540,542 L485,542 L490,530 Q490,490 510,460 Q470,410 460,392 Q402,399 300,397 Q222,397 188,388 Z" fill="url(#skin)" opacity=".55" stroke="#2a211e" strokeWidth="1.5" />
-        <path d="M175,356 Q168,326 142,330 Q118,336 122,360 Q126,384 156,384 Q178,382 188,368 Z" fill="url(#skin)" opacity=".6" stroke="#2a211e" strokeWidth="1.5" />
+        {/* Skin Silhouettes (Use dark gradient fallback if simple dark/light switch is complex for url IDs, but CSS custom props is better. We'll use currentColor trick or separate components if needed. Actually we can style 'style={{fill: "var(--skin-fill)"}}' but for now, we leave the gradient as is and change stroke). */}
+        <g className="dark:hidden">
+          <path d="M188,356 Q214,322 262,332 Q332,340 402,350 Q452,356 470,365 Q530,375 540,460 Q540,500 520,530 L540,535 L540,542 L485,542 L490,530 Q490,490 510,460 Q470,410 460,392 Q402,399 300,397 Q222,397 188,388 Z" fill="url(#skinLight)" opacity=".7" stroke="#bda28b" strokeWidth="1.5" />
+          <path d="M175,356 Q168,326 142,330 Q118,336 122,360 Q126,384 156,384 Q178,382 188,368 Z" fill="url(#skinLight)" opacity=".7" stroke="#bda28b" strokeWidth="1.5" />
+        </g>
+        <g className="hidden dark:block">
+          <path d="M188,356 Q214,322 262,332 Q332,340 402,350 Q452,356 470,365 Q530,375 540,460 Q540,500 520,530 L540,535 L540,542 L485,542 L490,530 Q490,490 510,460 Q470,410 460,392 Q402,399 300,397 Q222,397 188,388 Z" fill="url(#skin)" opacity=".55" stroke="#2a211e" strokeWidth="1.5" />
+          <path d="M175,356 Q168,326 142,330 Q118,336 122,360 Q126,384 156,384 Q178,382 188,368 Z" fill="url(#skin)" opacity=".6" stroke="#2a211e" strokeWidth="1.5" />
+        </g>
         
         {/* Bones background */}
         <g opacity=".8">
@@ -187,55 +185,55 @@ export default function KinematicScene() {
         <line x1={Ex} y1={Ey} x2={Wx} y2={Wy} stroke="url(#boneGrad)" strokeWidth="6" strokeLinecap="round" />
         
         {/* Dynamic Muscles */}
-        <path d={mTriPath} fill={triColor} filter="url(#soft)" stroke="#00000030" strokeWidth="1" className="transition-colors duration-150" />
-        <path d={mPecPath} fill={pecColor} filter="url(#soft)" stroke="#00000030" strokeWidth="1" className="transition-colors duration-150" />
-        <ellipse cx={dcx} cy={dcy} rx={18} ry={15} transform={`rotate(${deltRot} ${dcx} ${dcy})`} fill={deltColor} filter="url(#soft)" stroke="#00000030" strokeWidth="1" className="transition-colors duration-150" />
+        <path d={mTriPath} fill={triColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
+        <path d={mPecPath} fill={pecColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
+        <ellipse cx={dcx} cy={dcy} rx={18} ry={15} transform={`rotate(${deltRot} ${dcx} ${dcy})`} fill={deltColor} filter="url(#soft)" strokeWidth="1" className="transition-colors duration-150 stroke-black/10 dark:stroke-black/30" />
         
         {/* Muscle Highlights */}
-        <path d={mTriHiPath} fill="none" stroke="#fff" strokeWidth="2" opacity=".12" />
-        <path d={mPecHiPath} fill="none" stroke="#fff" strokeWidth="2" opacity=".12" />
+        <path d={mTriHiPath} fill="none" strokeWidth="2" opacity=".12" className="stroke-white" />
+        <path d={mPecHiPath} fill="none" strokeWidth="2" opacity=".12" className="stroke-white" />
 
         {/* Force & Moment Arm Guidelines */}
-        <line x1={Wx} y1="0" x2={Wx} y2="600" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="5,5" opacity={gravLineOpacity} />
-        <g stroke="#3b82f6" strokeWidth="2" opacity=".75">
+        <line x1={Wx} y1="0" x2={Wx} y2="600" strokeWidth="1.5" strokeDasharray="5,5" opacity={gravLineOpacity} className="stroke-red-400 dark:stroke-red-500" />
+        <g strokeWidth="2" opacity=".75" className="stroke-blue-500 dark:stroke-blue-400">
           <line x1={S.x} y1="352" x2={Wx} y2="352" />
           <line x1={S.x} y1="346" x2={S.x} y2="358" />
           <line x1={Wx} y1="346" x2={Wx} y2="358" />
         </g>
-        <text x={(S.x + Wx) / 2} y="372" fill="#60a5fa" fontSize="11" fontFamily="monospace" textAnchor="middle" opacity={maLblOpacity}>
+        <text x={(S.x + Wx) / 2} y="372" fontSize="11" fontFamily="monospace" textAnchor="middle" opacity={maLblOpacity} className="fill-blue-600 dark:fill-blue-400">
           brazo de momento
         </text>
 
         {/* Barbell Assembly */}
         <g transform={`translate(${Wx}, ${Wy})`}>
-          <circle r="66" fill="rgba(37,99,235,.16)" stroke="#3b82f6" strokeWidth="6" />
-          <circle r="49" fill="none" stroke="#2563eb" strokeWidth="2" opacity=".5" />
-          <circle r="22" fill="#1a1a1a" stroke="#555" strokeWidth="3" />
-          <circle r="7" fill="#e0e0e0" />
+          <circle r="66" strokeWidth="6" className="fill-blue-500/10 dark:fill-blue-500/20 stroke-blue-400 dark:stroke-blue-600" />
+          <circle r="49" fill="none" strokeWidth="2" opacity=".5" className="stroke-blue-400 dark:stroke-blue-600" />
+          <circle r="22" strokeWidth="3" className="fill-zinc-800 dark:fill-[#1a1a1a] stroke-zinc-600 dark:stroke-[#555]" />
+          <circle r="7" className="fill-zinc-200 dark:fill-[#e0e0e0]" />
         </g>
 
         {/* Joints and Data Labels */}
-        <circle cx={S.x} cy={S.y} r="7" fill="#111" stroke="#fff" strokeWidth="2" opacity=".9" />
-        <circle cx={Ex} cy={Ey} r="6" fill="#111" stroke="#fff" strokeWidth="2" />
-        <circle cx={Wx} cy={Wy} r="5" fill="#111" stroke="#00e5ff" strokeWidth="2" />
+        <circle cx={S.x} cy={S.y} r="7" strokeWidth="2" opacity=".9" className="fill-zinc-800 dark:fill-[#111] stroke-white" />
+        <circle cx={Ex} cy={Ey} r="6" strokeWidth="2" className="fill-zinc-800 dark:fill-[#111] stroke-white" />
+        <circle cx={Wx} cy={Wy} r="5" strokeWidth="2" className="fill-zinc-800 dark:fill-[#111] stroke-blue-400 dark:stroke-[#00e5ff]" />
         
-        <text x={Ex + 14} y={Ey + 4} fill="#00e5ff" fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="start">
+        <text x={Ex + 14} y={Ey + 4} fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="start" className="fill-blue-700 dark:fill-[#00e5ff]">
           {elbowAngle}°
         </text>
-        <text x={S.x} y={S.y - 14} fill="#00e5ff" fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+        <text x={S.x} y={S.y - 14} fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="middle" className="fill-blue-700 dark:fill-[#00e5ff]">
           {shoulderAngle}°
         </text>
         
-        <text x={c1.x - 8} y={c1.y + 2} fill="#e8e8e8" fontSize="12" fontWeight="bold" textAnchor="end">Pectoral mayor</text>
-        <text x={dcx} y={dcy - 22} fill="#e8e8e8" fontSize="12" fontWeight="bold" textAnchor="middle">Deltoides ant.</text>
-        <text x={tm.x + bnx * 6 + 8} y={tm.y + bny * 6} fill="#e8e8e8" fontSize="12" fontWeight="bold" textAnchor="start">Tríceps</text>
+        <text x={c1.x - 8} y={c1.y + 2} fontSize="12" fontWeight="bold" textAnchor="end" className="fill-zinc-700 dark:fill-[#e8e8e8]">Pectoral mayor</text>
+        <text x={dcx} y={dcy - 22} fontSize="12" fontWeight="bold" textAnchor="middle" className="fill-zinc-700 dark:fill-[#e8e8e8]">Deltoides ant.</text>
+        <text x={tm.x + bnx * 6 + 8} y={tm.y + bny * 6} fontSize="12" fontWeight="bold" textAnchor="start" className="fill-zinc-700 dark:fill-[#e8e8e8]">Tríceps</text>
 
         {/* Legend */}
         <g transform="translate(30,548)">
-          <text x="0" y="-6" fill="#777" fontSize="10" fontFamily="monospace">COLOR DEL CUERPO = DEMANDA / CONTRIBUCIÓN RELATIVA</text>
+          <text x="0" y="-6" fontSize="10" fontFamily="monospace" className="fill-zinc-500 dark:fill-[#777]">COLOR DEL CUERPO = DEMANDA / CONTRIBUCIÓN RELATIVA</text>
           <rect x="0" y="0" width="150" height="8" rx="2" fill="url(#legendGrad)" />
-          <text x="0" y="22" fill="#666" fontSize="9" fontFamily="monospace">menor</text>
-          <text x="150" y="22" fill="#666" fontSize="9" fontFamily="monospace" textAnchor="end">mayor</text>
+          <text x="0" y="22" fontSize="9" fontFamily="monospace" className="fill-zinc-500 dark:fill-[#666]">menor</text>
+          <text x="150" y="22" fontSize="9" fontFamily="monospace" textAnchor="end" className="fill-zinc-500 dark:fill-[#666]">mayor</text>
         </g>
       </svg>
     </div>
