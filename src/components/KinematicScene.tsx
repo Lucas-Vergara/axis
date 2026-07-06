@@ -2,11 +2,10 @@
 
 import React, { useRef } from "react";
 import { useSimulationStore } from "@/store/useSimulationStore";
-import { calculateBiomechanics, getMuscleColor } from "@/utils/biomechanics";
+import { calculateBiomechanics, getMuscleColor, SHOULDER_POS, L_ARM } from "@/utils/biomechanics";
 
 export default function KinematicScene() {
   const progress = useSimulationStore((state) => state.progress);
-  const weight = useSimulationStore((state) => state.weight);
   const setProgress = useSimulationStore((state) => state.setProgress);
   const isPlaying = useSimulationStore((state) => state.isPlaying);
   const setIsPlaying = useSimulationStore((state) => state.setIsPlaying);
@@ -15,24 +14,23 @@ export default function KinematicScene() {
   const isDragging = useRef(false);
 
   // Calculate all biomechanical coordinates and angles
-  const metrics = calculateBiomechanics(progress, weight);
+  const metrics = calculateBiomechanics(progress);
   const {
     jointPositions: { shoulder, elbow, wrist, barbell },
     shoulderAngle,
     elbowAngle,
-    shoulderMomentArm,
-    elbowMomentArm,
-    pectoralTension,
-    tricepsTension,
-    deltoidTension,
-    barbellForce,
+    tqHombro,
+    tqCodo,
+    pec,
+    delt,
+    tri,
   } = metrics;
 
   // Drag handlers for direct screen scrubbing
   const handleStart = (clientY: number) => {
     isDragging.current = true;
     if (isPlaying) {
-      setIsPlaying(false); // pause play to avoid conflicting updates
+      setIsPlaying(false);
     }
     handleMove(clientY);
   };
@@ -41,12 +39,13 @@ export default function KinematicScene() {
     if (!isDragging.current || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     
-    // Scale clientY to SVG viewBox coordinates (viewBox height is 500)
-    const clickY = ((clientY - rect.top) / rect.height) * 500;
+    // Scale clientY to SVG viewBox coordinates (viewBox height is 600)
+    const clickY = ((clientY - rect.top) / rect.height) * 600;
     
-    // Map clickY (range 140 to 290) to progress (0 to 100)
-    const newProgress = ((clickY - 140) / (290 - 140)) * 100;
-    setProgress(Math.max(0, Math.min(100, newProgress)));
+    // Y range for barbell from racked/unracked (148/145) to chest (320)
+    // Approximate mapping for user drag UX
+    const newProgress = ((clickY - 145) / (320 - 145)) * 100;
+    setProgress(Math.max(-30, Math.min(100, newProgress)));
   };
 
   const handleEnd = () => {
@@ -54,69 +53,58 @@ export default function KinematicScene() {
   };
 
   // Muscle color codes
-  const pectoralColor = getMuscleColor(pectoralTension);
-  const tricepsColor = getMuscleColor(tricepsTension);
-  const deltoidColor = getMuscleColor(deltoidTension);
+  const pecColor = getMuscleColor(pec, 20, 32);
+  const deltColor = getMuscleColor(delt, 20, 30);
+  const triColor = getMuscleColor(tri, 13, 20);
 
-  // Derive points for muscle geometry
-  const pectoralSternum = { x: 325, y: 295 };
-  const upperArmMid = {
-    x: shoulder.x + 0.45 * (elbow.x - shoulder.x),
-    y: shoulder.y + 0.45 * (elbow.y - shoulder.y),
-  };
+  // Vectors for muscles (Same logic as Liss HTML script)
+  const S = shoulder;
+  const Ex = elbow.x;
+  const Ey = elbow.y;
+  const Wx = wrist.x;
+  const Wy = wrist.y;
+  
+  const hx = Ex - S.x;
+  const hy = Ey - S.y;
+  const hl = Math.hypot(hx, hy) || 1;
+  const ux = hx / hl;
+  const uy = hy / hl;
+  const pnx = uy;
+  const pny = -ux;
+  const bnx = -uy;
+  const bny = ux;
 
-  const deltoidOrigin = { x: 265, y: 300 };
+  // Triceps logic
+  const ta = { x: S.x + bnx * 9, y: S.y + bny * 9 };
+  const tb = { x: Ex + bnx * 7, y: Ey + bny * 7 };
+  const tm = { x: (ta.x + tb.x) / 2 + bnx * 11, y: (ta.y + tb.y) / 2 + bny * 11 };
+  const ti = { x: (ta.x + tb.x) / 2 + bnx * 1, y: (ta.y + tb.y) / 2 + bny * 1 };
+  const mTriPath = `M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y} Q${ti.x},${ti.y} ${ta.x},${ta.y} Z`;
+  const mTriHiPath = `M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y}`;
 
-  const tricepsOrigin = { x: 270, y: 332 };
-  const upperArmMidBack = {
-    x: shoulder.x + 0.5 * (elbow.x - shoulder.x) - 8,
-    y: shoulder.y + 0.5 * (elbow.y - shoulder.y) + 4,
-  };
+  // Deltoid logic
+  const dcx = S.x + ux * 4 + pnx * 3;
+  const dcy = S.y + uy * 4 + pny * 3;
+  const deltRot = Math.atan2(uy, ux) * 180 / Math.PI;
 
-  // Calculate angles for rendering bone geometries in local coordinate systems
-  const humerusAngle = Math.atan2(elbow.y - shoulder.y, elbow.x - shoulder.x) * (180 / Math.PI);
-  const humerusLength = Math.sqrt(
-    Math.pow(elbow.x - shoulder.x, 2) + Math.pow(elbow.y - shoulder.y, 2)
-  );
+  // Pectoral logic
+  const c1 = { x: 236, y: 334 };
+  const c2 = { x: 250, y: 362 };
+  const ins = { x: S.x + ux * 24 + pnx * 5, y: S.y + uy * 24 + pny * 5 };
+  const mPecPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y} Q${(c2.x + ins.x) / 2},${(c2.y + ins.y) / 2 + 4} ${c2.x},${c2.y} Q${(c1.x + c2.x) / 2 - 4},${(c1.y + c2.y) / 2} ${c1.x},${c1.y} Z`;
+  const mPecHiPath = `M${c1.x},${c1.y} Q${(c1.x + ins.x) / 2 - 6},${(c1.y + ins.y) / 2 - 8} ${ins.x},${ins.y}`;
 
-  const forearmAngle = Math.atan2(wrist.y - elbow.y, wrist.x - elbow.x) * (180 / Math.PI);
-  const forearmLength = Math.sqrt(
-    Math.pow(wrist.x - elbow.x, 2) + Math.pow(wrist.y - elbow.y, 2)
-  );
-
-  // Pre-calculate clean variable values to avoid division operator parsing issues in Turbopack JSX
-  const tricepsFiberOpacity = 0.3 + 0.3 * (tricepsTension / 100);
-  const pectoralFillOpacity = 0.75 + 0.2 * (pectoralTension / 100);
-  const pectoralFiberOpacity = 0.2 + 0.3 * (pectoralTension / 100);
-  const deltoidFillOpacity = 0.75 + 0.2 * (deltoidTension / 100);
-
-  // Moment arm label coordinates calculated outside JSX
-  const shoulderLabelX = Math.min(shoulder.x, barbell.x) + Math.abs(shoulder.x - barbell.x) / 2;
-  const shoulderRectX = shoulderLabelX - 32;
-
-  const elbowLabelX = Math.min(elbow.x, barbell.x) + Math.abs(elbow.x - barbell.x) / 2;
-  const elbowRectX = elbowLabelX - 32;
-
-  // Vector height scale: heavier loads demand taller, bolder gravity arrows
-  const gravityVectorHeight = 30 + 35 * (weight / 60);
-  const gravityVectorTextY = gravityVectorHeight + 10;
-  const vectorThickness = 1.8 + weight / 50;
+  // Math variables outside JSX to prevent Turbopack parsing issues
+  const gravLineOpacity = 0.5;
+  const maLblOpacity = Math.abs(Wx - S.x) > 34 ? 0.85 : 0;
+  const isLateralView = true;
 
   return (
-    <div className="w-full flex flex-col items-center justify-center p-4 bg-zinc-900/50 rounded-2xl border border-zinc-800/80 shadow-2xl backdrop-blur-md">
-      <div className="w-full flex items-center justify-between mb-3 border-b border-zinc-800 pb-3">
-        <h2 className="text-sm font-semibold tracking-wider uppercase text-blue-400">
-          Escenario Cinemático (Vista Sagital)
-        </h2>
-        <span className="text-xs bg-zinc-850 text-zinc-400 px-2.5 py-1 rounded-full border border-zinc-800 font-mono">
-          Escala: 1px = 0.3 cm
-        </span>
-      </div>
-
-      {/* Interactive SVG Canvas */}
+    <div className="w-full flex-1 relative flex items-center justify-center bg-[#111] rounded-xl border border-neutral-800 overflow-hidden shadow-2xl h-full">
       <svg
         ref={svgRef}
-        viewBox="0 0 600 500"
+        viewBox="0 0 800 600"
+        preserveAspectRatio="xMidYMid meet"
         onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientY); }}
         onMouseMove={(e) => { e.preventDefault(); handleMove(e.clientY); }}
         onMouseUp={handleEnd}
@@ -125,379 +113,131 @@ export default function KinematicScene() {
         onTouchMove={(e) => { handleMove(e.touches[0].clientY); }}
         onTouchEnd={handleEnd}
         onTouchCancel={handleEnd}
-        className="w-full max-w-[550px] aspect-square rounded-xl bg-zinc-950/60 border border-zinc-900 shadow-inner select-none cursor-row-resize touch-none"
+        className="w-full h-full select-none cursor-row-resize touch-none"
       >
-        {/* SVG definitions for patterns, markers and glow filters */}
         <defs>
-          <radialGradient id="shoulderGlow" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.4" />
-            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-          </radialGradient>
-          <linearGradient id="benchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2e2e30" />
-            <stop offset="100%" stopColor="#1a1a1c" />
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1f1f1f" strokeWidth="1" strokeDasharray="4,4" />
+          </pattern>
+          <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#5a4a44" />
+            <stop offset="1" stopColor="#3a2f2c" />
           </linearGradient>
-          <filter id="vectorGlow" x="-25%" y="-25%" width="150%" height="150%">
-            <feGaussianBlur stdDeviation="3" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          <linearGradient id="boneGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#efe7d4" />
+            <stop offset="1" stopColor="#c9bda2" />
+          </linearGradient>
+          <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="3.2" result="b" />
+            <feMerge>
+              <feMergeNode in="b" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
           </filter>
+          <linearGradient id="legendGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="rgb(43,108,176)" />
+            <stop offset=".5" stopColor="rgb(224,165,46)" />
+            <stop offset="1" stopColor="rgb(224,72,58)" />
+          </linearGradient>
         </defs>
 
-        {/* 1. Floor & Grid Background (Technical look) */}
-        <line x1="20" y1="460" x2="580" y2="460" stroke="#27272a" strokeWidth="2" />
-        <g stroke="#18181b" strokeWidth="1" strokeDasharray="3,3">
-          <line x1="100" y1="50" x2="100" y2="460" />
-          <line x1="200" y1="50" x2="200" y2="460" />
-          <line x1="300" y1="50" x2="300" y2="460" />
-          <line x1="400" y1="50" x2="400" y2="460" />
-          <line x1="500" y1="50" x2="500" y2="460" />
-          <line x1="20" y1="150" x2="580" y2="150" />
-          <line x1="20" y1="250" x2="580" y2="250" />
-          <line x1="20" y1="350" x2="580" y2="350" />
-        </g>
+        <rect width="100%" height="100%" fill="url(#grid)" />
 
-        {/* 2. Flat Bench Press Bench */}
-        {/* Bench Legs */}
-        <rect x="140" y="340" width="30" height="120" fill="url(#benchGrad)" stroke="#3f3f46" strokeWidth="1" />
-        <rect x="360" y="340" width="30" height="120" fill="url(#benchGrad)" stroke="#3f3f46" strokeWidth="1" />
-        {/* Bench Support base */}
-        <rect x="100" y="450" width="320" height="10" rx="3" fill="#27272a" />
-        {/* Bench Padding (where human lies) */}
-        <rect x="100" y="335" width="310" height="12" rx="4" fill="#09090b" stroke="#3f3f46" strokeWidth="1.5" />
-
-        {/* 3. Barbell Rack Support (Background layer) */}
-        <path d="M 230,340 L 230,170 L 220,170 L 220,150 L 245,150 L 245,170 L 235,170 L 235,340 Z" fill="#18181b" stroke="#3f3f46" strokeWidth="1" />
-
-        {/* 4. Human Body Silhouette (Lying position, sagittal view) */}
-        {/* Spine / Vertebrae (Anatomical Detail) */}
-        <g stroke="#4338ca" strokeWidth="1.5" fill="none" opacity={0.35}>
-          {Array.from({ length: 13 }).map((_, i) => (
-            <rect
-              key={i}
-              x={185 + i * 16}
-              y={324}
-              width="10"
-              height="6"
-              rx="1.5"
-              stroke="#6366f1"
-              fill="#1e1b4b"
-            />
-          ))}
-        </g>
-
-        {/* Detailed Ribcage (Anatomical Detail) */}
-        <g stroke="#818cf8" strokeWidth="1.2" fill="none" opacity={0.3}>
-          <path d="M 260,324 Q 275,295 265,310" />
-          <path d="M 275,324 Q 292,290 280,307" />
-          <path d="M 290,324 Q 308,285 295,302" />
-          <path d="M 305,324 Q 325,282 310,299" />
-          <path d="M 320,324 Q 340,285 325,303" />
-          <path d="M 335,324 Q 355,290 340,308" />
-        </g>
-
-        {/* Torso Clavicle & Ribcage Fill Layer */}
-        <path
-          d="M 210,322 Q 245,315 280,312 Q 305,278 330,289 Q 360,305 390,325 L 390,332 L 210,332 Z"
-          fill="#1e1b4b"
-          opacity={0.25}
-        />
-
-        {/* Head with skull contours */}
-        <circle cx="170" cy="305" r="24" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
-        <path d="M 160,317 Q 165,327 172,327 L 180,327 Z" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" /> {/* Jawline */}
-        
-        {/* Neck */}
-        <path d="M 188,310 L 205,318 L 200,330 L 182,324 Z" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
-        
-        {/* Hips and Pelvis */}
-        <ellipse cx="390" cy="325" rx="30" ry="20" fill="#1e1b4b" stroke="#4338ca" strokeWidth="2" opacity="0.85" />
-        
-        {/* Thigh (leg segment 1) */}
-        <line x1="390" y1="325" x2="440" y2="385" stroke="#4338ca" strokeWidth="12" strokeLinecap="round" opacity={0.7} />
-        <line x1="390" y1="325" x2="440" y2="385" stroke="#1e1b4b" strokeWidth="8" strokeLinecap="round" />
-        
-        {/* Calf (leg segment 2) to floor */}
-        <line x1="440" y1="385" x2="455" y2="460" stroke="#4338ca" strokeWidth="10" strokeLinecap="round" opacity={0.7} />
-        <line x1="440" y1="385" x2="455" y2="460" stroke="#1e1b4b" strokeWidth="6" strokeLinecap="round" />
-        <rect x="445" y="455" width="22" height="7" rx="2" fill="#4338ca" opacity="0.8" />
-
-        {/* Torso Profile Outline (Chest Profile where bar touches) */}
-        <path
-          d="M 210,322 Q 245,315 280,312 Q 305,278 330,289 Q 360,305 390,325"
-          fill="none"
-          stroke="#4338ca"
-          strokeWidth="3"
-          strokeLinecap="round"
-          opacity="0.85"
-        />
-
-        {/* 5. ANATOMICAL MUSCLES LAYER (Dynamic color/glow) */}
-        {/* TRÍCEPS BRAQUIAL */}
-        <path
-          d={`M ${tricepsOrigin.x},${tricepsOrigin.y} Q ${upperArmMidBack.x},${upperArmMidBack.y} ${elbow.x},${elbow.y}`}
-          fill="none"
-          stroke={tricepsColor}
-          strokeWidth="15"
-          strokeLinecap="round"
-          className="transition-colors duration-150 ease-out"
-        >
-          <title>{`Tríceps: ${tricepsTension}%`}</title>
-        </path>
-        {/* Triceps inner dynamic fibers */}
-        <path
-          d={`M ${tricepsOrigin.x},${tricepsOrigin.y} Q ${upperArmMidBack.x},${upperArmMidBack.y} ${elbow.x},${elbow.y}`}
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="2.5"
-          strokeDasharray="4,6"
-          opacity={tricepsFiberOpacity}
-        />
-
-        {/* PECTORAL MAYOR */}
-        <path
-          d={`M ${shoulder.x},${shoulder.y} Q ${pectoralSternum.x},${pectoralSternum.y} ${upperArmMid.x},${upperArmMid.y} Z`}
-          fill={pectoralColor}
-          stroke={pectoralColor}
-          strokeWidth="2"
-          fillOpacity={pectoralFillOpacity}
-          className="transition-colors duration-150 ease-out"
-        >
-          <title>{`Pectoral Mayor: ${pectoralTension}%`}</title>
-        </path>
-        {/* Pectoral Fiber details */}
-        <line x1="305" y1="307" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity={pectoralFiberOpacity} />
-        <line x1="318" y1="302" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity={pectoralFiberOpacity} />
-        <line x1="285" y1="312" x2={upperArmMid.x} y2={upperArmMid.y} stroke="#ffffff" strokeWidth="1" opacity={pectoralFiberOpacity} />
-
-        {/* DELTOIDES ANTERIOR */}
-        <path
-          d={`M ${deltoidOrigin.x},${deltoidOrigin.y} Q ${shoulder.x - 6},${shoulder.y - 10} ${upperArmMid.x},${upperArmMid.y} Z`}
-          fill={deltoidColor}
-          stroke={deltoidColor}
-          strokeWidth="2"
-          fillOpacity={deltoidFillOpacity}
-          className="transition-colors duration-150 ease-out"
-        >
-          <title>{`Deltoides Anterior: ${deltoidTension}%`}</title>
-        </path>
-
-        {/* 6. DETAILED BONES & JOINTS LAYER (Anatomical Bone Silhouettes) */}
-        {/* Upper Arm Bone (Humerus) - Rotates and scales dynamically */}
-        <g transform={`translate(${shoulder.x}, ${shoulder.y}) rotate(${humerusAngle})`}>
-          {/* Humerus silhouette with epicondyle flared ends */}
-          <path
-            d={`M 0,0 C 5,8 10,4 12,2 L ${humerusLength - 10},2 C ${humerusLength - 8},3 ${humerusLength - 4},6 ${humerusLength},4 L ${humerusLength},-4 C ${humerusLength - 4},-6 ${humerusLength - 8},-3 ${humerusLength - 10},-2 L 12,-2 C 10,-4 5,-8 0,0 Z`}
-            fill="#e4e4e7"
-            stroke="#a1a1aa"
-            strokeWidth="1"
-            opacity={0.9}
-          />
-          {/* Internal marrow cavity line */}
-          <line x1="14" y1="0" x2={humerusLength - 12} y2="0" stroke="#a1a1aa" strokeWidth="1" strokeDasharray="5,3" opacity="0.6" />
-        </g>
-
-        {/* Forearm Bones (Radius & Ulna) - Rotates and scales dynamically */}
-        <g transform={`translate(${elbow.x}, ${elbow.y}) rotate(${forearmAngle})`}>
-          {/* Bone 1: Radius */}
-          <path
-            d={`M 0,2 C 4,5 8,3 10,1.5 L ${forearmLength - 8},1 C ${forearmLength - 5},2 ${forearmLength - 2},4 ${forearmLength},2.5 L ${forearmLength},0.5 C ${forearmLength - 2},-1 ${forearmLength - 5},0 ${forearmLength - 8},-0.5 L 10,-1.5 C 8,-3 4,-5 0,2 Z`}
-            fill="#d4d4d8"
-            stroke="#71717a"
-            strokeWidth="0.8"
-            opacity={0.9}
-          />
-          {/* Bone 2: Ulna */}
-          <path
-            d={`M 0,-2 C 4,-0.5 8,-2 10,-2.5 L ${forearmLength - 8}, -3.5 C ${forearmLength - 5},-3 ${forearmLength - 2},-1 ${forearmLength},-2.5 L ${forearmLength},-4.5 C ${forearmLength - 2},-5 ${forearmLength - 5},-4.5 ${forearmLength - 8},-5.5 L 10,-4.5 C 8,-5 4,-3.5 0,-2 Z`}
-            fill="#f4f4f5"
-            stroke="#a1a1aa"
-            strokeWidth="0.8"
-            opacity={0.85}
-          />
-        </g>
-
-        {/* Shoulder Joint Pin */}
-        <circle cx={shoulder.x} cy={shoulder.y} r="7" fill="#18181b" stroke="#3b82f6" strokeWidth="2.5" />
-        <circle cx={shoulder.x} cy={shoulder.y} r="15" fill="url(#shoulderGlow)" pointerEvents="none" />
-
-        {/* Elbow Joint Pin */}
-        <circle cx={elbow.x} cy={elbow.y} r="6" fill="#18181b" stroke="#f4f4f5" strokeWidth="2" />
-
-        {/* Wrist Joint Pin */}
-        <circle cx={wrist.x} cy={wrist.y} r="4.5" fill="#18181b" stroke="#f4f4f5" strokeWidth="1.5" />
-
-        {/* 7. FORCE VECTORS & MOMENT ARMS (Scientific annotations) */}
-        {/* Vertical Line of Force Action (Gravity passing through the bar) */}
-        <line
-          x1={barbell.x}
-          y1="50"
-          x2={barbell.x}
-          y2="440"
-          stroke="#ef4444"
-          strokeWidth="1.5"
-          strokeDasharray="4,4"
-          opacity={0.6}
-        />
-
-        {/* Shoulder Moment Arm (Blue dimension line) */}
-        {shoulderMomentArm > 0 && (
-          <g>
-            <line
-              x1={shoulder.x}
-              y1={shoulder.y}
-              x2={barbell.x}
-              y2={shoulder.y}
-              stroke="#3b82f6"
-              strokeWidth="2"
-              strokeDasharray="1,1"
-            />
-            {/* Ticks at the ends */}
-            <line x1={shoulder.x} y1={shoulder.y - 6} x2={shoulder.x} y2={shoulder.y + 6} stroke="#3b82f6" strokeWidth="2" />
-            <line x1={barbell.x} y1={shoulder.y - 6} x2={barbell.x} y2={shoulder.y + 6} stroke="#3b82f6" strokeWidth="2" />
-            {/* Label box */}
-            <rect
-              x={shoulderRectX}
-              y={shoulder.y - 12}
-              width="64"
-              height="20"
-              rx="4"
-              fill="#1e3a8a"
-              stroke="#3b82f6"
-              strokeWidth="1"
-            />
-            <text
-              x={shoulderLabelX}
-              y={shoulder.y + 2}
-              fill="#93c5fd"
-              fontSize="9"
-              fontWeight="bold"
-              fontFamily="monospace"
-              textAnchor="middle"
-            >
-              {shoulderMomentArm} cm
-            </text>
+        <g id="powerRack" opacity="0.95">
+          <rect x="140" y="540" width="120" height="11" fill="#121212" stroke="#222" strokeWidth="2" rx="2" />
+          <rect x="180" y="80" width="28" height="462" fill="#151515" stroke="#222" strokeWidth="2" />
+          <rect x="198" y="82" width="4" height="458" fill="#1f1f1f" />
+          <g fill="#080808">
+            {Array.from({ length: 18 }).map((_, i) => (
+              <circle key={i} cx="194" cy={110 + i * 20} r="3.5" />
+            ))}
           </g>
-        )}
-
-        {/* Elbow Moment Arm (Green/Teal dimension line) */}
-        {elbowMomentArm > 0 && (
-          <g>
-            <line
-              x1={elbow.x}
-              y1={elbow.y}
-              x2={barbell.x}
-              y2={elbow.y}
-              stroke="#10b981"
-              strokeWidth="2"
-              strokeDasharray="1,1"
-            />
-            {/* Ticks at the ends */}
-            <line x1={elbow.x} y1={elbow.y - 6} x2={elbow.x} y2={elbow.y + 6} stroke="#10b981" strokeWidth="2" />
-            <line x1={barbell.x} y1={elbow.y - 6} x2={barbell.x} y2={elbow.y + 6} stroke="#10b981" strokeWidth="2" />
-            {/* Label box */}
-            <rect
-              x={elbowRectX}
-              y={elbow.y - 12}
-              width="64"
-              height="20"
-              rx="4"
-              fill="#064e3b"
-              stroke="#10b981"
-              strokeWidth="1"
-            />
-            <text
-              x={elbowLabelX}
-              y={elbow.y + 2}
-              fill="#a7f3d0"
-              fontSize="9"
-              fontWeight="bold"
-              fontFamily="monospace"
-              textAnchor="middle"
-            >
-              {elbowMomentArm} cm
-            </text>
-          </g>
-        )}
-
-        {/* 8. BARBELL & OLYMPIC WEIGHT PLATES (Dynamic movement) */}
-        <g transform={`translate(${barbell.x}, ${barbell.y})`}>
-          {/* Olympic Barbell rod (Sagittal view) */}
-          <circle cx="0" cy="0" r="14" fill="#a1a1aa" stroke="#52525b" strokeWidth="1.5" />
-          <circle cx="0" cy="0" r="6" fill="#27272a" />
-          
-          {/* Bar collar sleeve */}
-          <rect x="-18" y="-12" width="6" height="24" rx="1" fill="#71717a" stroke="#3f3f46" strokeWidth="1" />
-          
-          {/* Dynamic Weight plates stacking horizontally (concentric offset cylinders in sagittal view) */}
-          {Math.ceil((weight - 20) / 20) === 0 ? (
-            // Collar detail for an empty bar
-            <circle cx="0" cy="0" r="15" fill="#52525b" stroke="#27272a" strokeWidth="1.5" />
-          ) : (
-            // Stack weight plates along the bar sleeve to the left
-            Array.from({ length: Math.min(5, Math.ceil((weight - 20) / 20)) }).map((_, i) => {
-              const colors = ["#ef4444", "#3b82f6", "#10b981", "#eab308", "#8b5cf6"];
-              const plateColor = colors[i % colors.length];
-              const radius = 42 - i * 1.5; // slightly offset radius sizes
-              const offset = -i * 8; // slide to the left on sagittal sleeve
-              return (
-                <g key={i} transform={`translate(${offset}, 0)`}>
-                  {/* Plate face */}
-                  <circle cx="0" cy="0" r={radius} fill="#18181b" stroke={plateColor} strokeWidth="8" opacity="0.9" />
-                  <circle cx="0" cy="0" r={radius} fill="none" stroke="#09090b" strokeWidth="1" />
-                  {/* Inner ring */}
-                  <circle cx="0" cy="0" r="16" fill="none" stroke="#71717a" strokeWidth="1" opacity="0.5" />
-                </g>
-              );
-            })
-          )}
-
-          {/* Barbell sleeve cap with text */}
-          <circle cx="0" cy="0" r="14" fill="#18181b" stroke="#3f3f46" strokeWidth="1.5" />
-          <text x="0" y="3" fill="#ffffff" fontSize="8" fontWeight="extrabold" fontFamily="sans-serif" textAnchor="middle" opacity="0.95">
-            {weight}k
-          </text>
-
-          {/* Bold Force Vector Arrow pointing downwards from gravity center (scales dynamically with weight) */}
-          <g transform="translate(0, 10)" filter="url(#vectorGlow)">
-            <line x1="0" y1="0" x2="0" y2={gravityVectorHeight} stroke="#ef4444" strokeWidth={vectorThickness} />
-            <polygon points={`-6,${gravityVectorHeight - 5} 0,${gravityVectorHeight + 5} 6,${gravityVectorHeight - 5}`} fill="#ef4444" />
-          </g>
-          <text x="14" y={gravityVectorTextY} fill="#f87171" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
-            {barbellForce} N
-          </text>
+          <path d="M 180 320 L 380 320 L 380 336 L 180 336 Z" fill="#151515" stroke="#262626" strokeWidth="2" />
+          <rect x="208" y="318" width="168" height="4" fill="#050505" />
+          <path d="M 180 125 L 200 125 L 200 187 L 246 187 L 246 160 L 256 160 L 256 197 L 180 197 Z" fill="#151515" stroke="#262626" strokeWidth="2" />
+          <path d="M 198 125 L 202 125 L 202 185 L 244 185 L 244 160 L 248 160 L 248 189 L 198 189 Z" fill="#050505" />
         </g>
 
-        {/* 9. Joint Labels */}
-        <text x={shoulder.x - 20} y={shoulder.y + 24} fill="#60a5fa" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
-          Hombro
-        </text>
-        <text x={elbow.x - 10} y={elbow.y + 20} fill="#f4f4f5" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
-          Codo
-        </text>
-        <text x={wrist.x + 22} y={wrist.y - 10} fill="#f4f4f5" fontSize="10" fontWeight="bold" fontFamily="sans-serif">
-          Muñeca
+        <rect x="90" y="392" width="440" height="15" fill="#1c1c1c" rx="5" stroke="#2a2a2a" strokeWidth="2" />
+        <rect x="150" y="407" width="30" height="140" fill="#151515" />
+        <rect x="450" y="407" width="30" height="140" fill="#151515" />
+        <rect x="120" y="542" width="400" height="9" fill="#1a1a1a" rx="3" />
+
+        {/* Skin Silhouettes */}
+        <path d="M188,356 Q214,322 262,332 Q332,340 402,350 Q452,356 470,365 Q530,375 540,460 Q540,500 520,530 L540,535 L540,542 L485,542 L490,530 Q490,490 510,460 Q470,410 460,392 Q402,399 300,397 Q222,397 188,388 Z" fill="url(#skin)" opacity=".55" stroke="#2a211e" strokeWidth="1.5" />
+        <path d="M175,356 Q168,326 142,330 Q118,336 122,360 Q126,384 156,384 Q178,382 188,368 Z" fill="url(#skin)" opacity=".6" stroke="#2a211e" strokeWidth="1.5" />
+        
+        {/* Bones background */}
+        <g opacity=".8">
+          <path d="M262,338 Q300,352 300,384" fill="none" stroke="url(#boneGrad)" strokeWidth="3" opacity=".55" />
+          <path d="M288,340 Q326,354 326,386" fill="none" stroke="url(#boneGrad)" strokeWidth="3" opacity=".55" />
+          <path d="M316,344 Q352,358 352,388" fill="none" stroke="url(#boneGrad)" strokeWidth="3" opacity=".55" />
+          <path d="M344,347 Q378,360 378,388" fill="none" stroke="url(#boneGrad)" strokeWidth="3" opacity=".55" />
+          <line x1="252" y1="335" x2="300" y2="346" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" />
+          <line x1="248" y1="336" x2="270" y2="344" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" />
+          <path d="M272,352 L300,360 L286,376 Z" fill="url(#boneGrad)" opacity=".5" />
+          <path d="M440,366 Q462,368 466,384 L448,388 Q438,376 440,366 Z" fill="url(#boneGrad)" opacity=".45" />
+          <line x1="455" y1="378" x2="525" y2="455" stroke="url(#boneGrad)" strokeWidth="6" strokeLinecap="round" opacity=".55" />
+          <line x1="525" y1="455" x2="505" y2="532" stroke="url(#boneGrad)" strokeWidth="5" strokeLinecap="round" opacity=".55" />
+          <line x1="505" y1="532" x2="528" y2="538" stroke="url(#boneGrad)" strokeWidth="4" strokeLinecap="round" opacity=".55" />
+        </g>
+
+        {/* Dynamic Arm Bones */}
+        <line x1={S.x} y1={S.y} x2={Ex} y2={Ey} stroke="url(#boneGrad)" strokeWidth="7" strokeLinecap="round" />
+        <line x1={Ex} y1={Ey} x2={Wx} y2={Wy} stroke="url(#boneGrad)" strokeWidth="6" strokeLinecap="round" />
+        
+        {/* Dynamic Muscles */}
+        <path d={mTriPath} fill={triColor} filter="url(#soft)" stroke="#00000030" strokeWidth="1" className="transition-colors duration-150" />
+        <path d={mPecPath} fill={pecColor} filter="url(#soft)" stroke="#00000030" strokeWidth="1" className="transition-colors duration-150" />
+        <ellipse cx={dcx} cy={dcy} rx={18} ry={15} transform={`rotate(${deltRot} ${dcx} ${dcy})`} fill={deltColor} filter="url(#soft)" stroke="#00000030" strokeWidth="1" className="transition-colors duration-150" />
+        
+        {/* Muscle Highlights */}
+        <path d={mTriHiPath} fill="none" stroke="#fff" strokeWidth="2" opacity=".12" />
+        <path d={mPecHiPath} fill="none" stroke="#fff" strokeWidth="2" opacity=".12" />
+
+        {/* Force & Moment Arm Guidelines */}
+        <line x1={Wx} y1="0" x2={Wx} y2="600" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="5,5" opacity={gravLineOpacity} />
+        <g stroke="#3b82f6" strokeWidth="2" opacity=".75">
+          <line x1={S.x} y1="352" x2={Wx} y2="352" />
+          <line x1={S.x} y1="346" x2={S.x} y2="358" />
+          <line x1={Wx} y1="346" x2={Wx} y2="358" />
+        </g>
+        <text x={(S.x + Wx) / 2} y="372" fill="#60a5fa" fontSize="11" fontFamily="monospace" textAnchor="middle" opacity={maLblOpacity}>
+          brazo de momento
         </text>
 
-        {/* 10. Floating Interactive Instructions Overlay */}
-        <g transform="translate(300, 485)">
-          <rect x="-135" y="-12" width="270" height="24" rx="12" fill="#18181b" stroke="#27272a" strokeWidth="1" opacity="0.8" />
-          <text x="0" y="3.5" fill="#a1a1aa" fontSize="9" fontWeight="bold" fontFamily="sans-serif" textAnchor="middle">
-            👉 Desliza verticalmente sobre el gráfico para analizar
-          </text>
+        {/* Barbell Assembly */}
+        <g transform={`translate(${Wx}, ${Wy})`}>
+          <circle r="66" fill="rgba(37,99,235,.16)" stroke="#3b82f6" strokeWidth="6" />
+          <circle r="49" fill="none" stroke="#2563eb" strokeWidth="2" opacity=".5" />
+          <circle r="22" fill="#1a1a1a" stroke="#555" strokeWidth="3" />
+          <circle r="7" fill="#e0e0e0" />
+        </g>
+
+        {/* Joints and Data Labels */}
+        <circle cx={S.x} cy={S.y} r="7" fill="#111" stroke="#fff" strokeWidth="2" opacity=".9" />
+        <circle cx={Ex} cy={Ey} r="6" fill="#111" stroke="#fff" strokeWidth="2" />
+        <circle cx={Wx} cy={Wy} r="5" fill="#111" stroke="#00e5ff" strokeWidth="2" />
+        
+        <text x={Ex + 14} y={Ey + 4} fill="#00e5ff" fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="start">
+          {elbowAngle}°
+        </text>
+        <text x={S.x} y={S.y - 14} fill="#00e5ff" fontSize="12" fontFamily="monospace" fontWeight="bold" textAnchor="middle">
+          {shoulderAngle}°
+        </text>
+        
+        <text x={c1.x - 8} y={c1.y + 2} fill="#e8e8e8" fontSize="12" fontWeight="bold" textAnchor="end">Pectoral mayor</text>
+        <text x={dcx} y={dcy - 22} fill="#e8e8e8" fontSize="12" fontWeight="bold" textAnchor="middle">Deltoides ant.</text>
+        <text x={tm.x + bnx * 6 + 8} y={tm.y + bny * 6} fill="#e8e8e8" fontSize="12" fontWeight="bold" textAnchor="start">Tríceps</text>
+
+        {/* Legend */}
+        <g transform="translate(30,548)">
+          <text x="0" y="-6" fill="#777" fontSize="10" fontFamily="monospace">COLOR DEL CUERPO = DEMANDA / CONTRIBUCIÓN RELATIVA</text>
+          <rect x="0" y="0" width="150" height="8" rx="2" fill="url(#legendGrad)" />
+          <text x="0" y="22" fill="#666" fontSize="9" fontFamily="monospace">menor</text>
+          <text x="150" y="22" fill="#666" fontSize="9" fontFamily="monospace" textAnchor="end">mayor</text>
         </g>
       </svg>
-
-      {/* Mini real-time angle display badge */}
-      <div className="w-full grid grid-cols-2 gap-3 mt-4">
-        <div className="bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/60 flex items-center justify-between">
-          <span className="text-xs text-zinc-400">Ángulo Hombro:</span>
-          <span className="text-sm font-bold font-mono text-blue-400">{shoulderAngle}°</span>
-        </div>
-        <div className="bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/60 flex items-center justify-between">
-          <span className="text-xs text-zinc-400">Ángulo Codo:</span>
-          <span className="text-sm font-bold font-mono text-emerald-400">{elbowAngle}°</span>
-        </div>
-      </div>
     </div>
   );
 }

@@ -14,154 +14,103 @@ export interface BiomechanicalMetrics {
   jointPositions: JointPositions;
   shoulderAngle: number;
   elbowAngle: number;
-  shoulderMomentArm: number; // in cm
-  elbowMomentArm: number; // in cm
-  pectoralTension: number; // 0 to 100
-  tricepsTension: number; // 0 to 100
-  deltoidTension: number; // 0 to 100
-  barbellForce: number; // in Newtons (N)
-  shoulderTorque: number; // in Newton-meters (N-m)
-  elbowTorque: number; // in Newton-meters (N-m)
+  tqHombro: number;
+  tqCodo: number;
+  pec: number;
+  delt: number;
+  tri: number;
 }
 
-// Fixed dimensions for the 2D sagittal biomechanical model
-export const SHOULDER_POS: Point = { x: 280, y: 320 }; // Fixed shoulder joint
-export const L_ARM = 95; // Upper arm length
-export const L_FOREARM = 85; // Forearm length
-export const PX_TO_CM = 0.3; // Scale factor for moment arms (pixels to cm)
+// Fixed dimensions based on Liss's design
+export const SHOULDER_POS: Point = { x: 255, y: 352 }; // Fixed shoulder joint
+export const L_ARM = 112; // Upper arm length
+export const L_FORE = 98; // Forearm length
 
-/**
- * Calculates the barbell position along the parabolic J-curve trajectory.
- * @param progress 0 (lockout, top) to 100 (chest, bottom)
- */
-export function getBarbellPosition(progress: number): Point {
-  const p = progress / 100;
-  
-  // Starting point (lockout directly above shoulder, aligned vertically)
-  const xStart = 280;
-  const yStart = 140; // Lockout at Y=140 is exactly L_ARM + L_FOREARM (95+85=180px) from shoulder
-  
-  // Ending point (chest touch, slightly forward and down)
-  const xEnd = 330; 
-  const yEnd = 290; // Higher chest peak at Y=290
-  
-  // Parabolic "J-curve" calculation
-  const y = yStart + (yEnd - yStart) * p;
-  
-  // Curved J-parabola path
-  const x = xStart + (xEnd - xStart) * Math.pow(p, 1.5) + 10 * Math.sin(p * Math.PI);
-  
-  return { x, y };
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+const lerpA = (a: number[], b: number[], t: number) => a.map((v, i) => Math.round(lerp(v, b[i], t)));
+const rgb = (a: number[]) => `rgb(${a[0]}, ${a[1]}, ${a[2]})`;
+
+export function scale3(t: number): string {
+  t = clamp(t, 0, 1);
+  const A = [43, 108, 176], B = [224, 165, 46], C = [224, 72, 58];
+  return rgb(t < 0.5 ? lerpA(A, B, t / 0.5) : lerpA(B, C, (t - 0.5) / 0.5));
+}
+
+export function getMuscleColor(tensionValue: number, minTension: number, maxTension: number): string {
+  // Normalize tension to 0-1 range for the scale3 function
+  const t = clamp((tensionValue - minTension) / (maxTension - minTension), 0, 1);
+  return scale3(t);
 }
 
 /**
- * Solve Inverse Kinematics for the elbow position given shoulder and wrist.
- * We select the solution where the elbow points downwards (higher y).
+ * Computes all biomechanical metrics based on simulation progress
+ * Progress goes from -30 (racked) to 100 (chest)
  */
-export function solveElbowPosition(shoulder: Point, wrist: Point, r1: number, r2: number): Point {
-  const dx = wrist.x - shoulder.x;
-  const dy = wrist.y - shoulder.y;
-  let d = Math.sqrt(dx * dx + dy * dy);
-  
-  // Safeguards to prevent NaN in arccos calculations if the wrist goes out of reach
-  const maxReach = r1 + r2;
-  const minReach = Math.abs(r1 - r2);
-  if (d > maxReach) d = maxReach;
-  if (d < minReach) d = minReach;
-  
-  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
-  const h = Math.sqrt(Math.max(0, r1 * r1 - a * a));
-  
-  const x0 = shoulder.x + (a * dx) / d;
-  const y0 = shoulder.y + (a * dy) / d;
-  
-  // Two possible intersection points
-  const p1 = {
-    x: x0 + (h * dy) / d,
-    y: y0 - (h * dx) / d
-  };
-  const p2 = {
-    x: x0 - (h * dy) / d,
-    y: y0 + (h * dx) / d
-  };
-  
-  // We want the elbow pointing downwards (higher y coordinate)
-  return p1.y > p2.y ? p1 : p2;
-}
+export function calculateBiomechanics(p: number): BiomechanicalMetrics {
+  let Wx = 0, Wy = 0, Ex = 0, Ey = 0;
+  const S = SHOULDER_POS;
 
-/**
- * Computes all biomechanical metrics based on simulation progress and load weight
- */
-export function calculateBiomechanics(progress: number, weight: number = 60): BiomechanicalMetrics {
-  const barbell = getBarbellPosition(progress);
-  const wrist = { ...barbell }; // Wrist holds the barbell
-  
-  const shoulder = { ...SHOULDER_POS };
-  const elbow = solveElbowPosition(shoulder, wrist, L_ARM, L_FOREARM);
-  
-  // Calculate joint angles in degrees
-  const armAngleRad = Math.atan2(elbow.y - shoulder.y, elbow.x - shoulder.x);
-  const shoulderAngle = Math.round(90 - (armAngleRad - Math.PI / 2) * (180 / Math.PI));
-  
-  const v1 = { x: shoulder.x - elbow.x, y: shoulder.y - elbow.y };
-  const v2 = { x: wrist.x - elbow.x, y: wrist.y - elbow.y };
-  
-  const len1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
-  const len2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
-  
-  const dotProduct = v1.x * v2.x + v1.y * v2.y;
-  const cosTheta = Math.max(-1, Math.min(1, dotProduct / (len1 * len2)));
-  const elbowAngle = Math.round(Math.acos(cosTheta) * (180 / Math.PI));
-  
-  // Calculate Moment Arms (horizontal distance from joint to force vector)
-  const shoulderMomentArmPx = Math.abs(barbell.x - shoulder.x);
-  const elbowMomentArmPx = Math.abs(barbell.x - elbow.x);
-  
-  const shoulderMomentArm = parseFloat((shoulderMomentArmPx * PX_TO_CM).toFixed(1));
-  const elbowMomentArm = parseFloat((elbowMomentArmPx * PX_TO_CM).toFixed(1));
-  
-  // Real Physics calculations:
-  // Force of barbell: Mass * Gravity
-  const barbellForce = parseFloat((weight * 9.81).toFixed(1)); // in Newtons
-  
-  // Torques: Force * Moment Arm (convert cm to meters)
-  const shoulderTorque = parseFloat((barbellForce * (shoulderMomentArm / 100)).toFixed(1)); // N-m
-  const elbowTorque = parseFloat((barbellForce * (elbowMomentArm / 100)).toFixed(1)); // N-m
+  // KINEMATICS IN PHASES (Unrack vs Descent)
+  if (p < 0) {
+      if (p < -15) {
+          // Phase 1: Lift off from rack
+          const t = (p + 30) / 15;
+          Wx = 220;
+          Wy = lerp(165, 148, t);
+      } else {
+          // Phase 2: Horizontal pull to Lockout
+          const t = (p + 15) / 15; 
+          Wx = lerp(220, 280.7, t);
+          Wy = lerp(148, 145, t);
+      }
+      let dist = Math.hypot(Wx - S.x, Wy - S.y);
+      dist = clamp(dist, 0.1, L_ARM + L_FORE - 0.1);
+      const a1 = Math.acos((Math.pow(L_ARM, 2) + Math.pow(dist, 2) - Math.pow(L_FORE, 2)) / (2 * L_ARM * dist));
+      const angBar = Math.atan2(Wy - S.y, Wx - S.x);
+      Ex = S.x + L_ARM * Math.cos(angBar + a1);
+      Ey = S.y + L_ARM * Math.sin(angBar + a1);
+  } else {
+      // Phase 3: Descent (J-Curve)
+      const fase = p / 100;
+      Wy = 145 + 175 * fase;
+      Ey = Wy + L_FORE;
+      const dy = Ey - S.y;
+      Ex = S.x + Math.sqrt(Math.max(0, Math.pow(L_ARM, 2) - Math.pow(dy, 2)));
+      Wx = Ex;
+  }
 
-  // Calculate Muscle Tensions scale based on weight (referenced to standard 60 kg)
-  // Heavier load leads to higher activation/tension. An empty bar (20kg) has very low tension.
-  const loadFactor = weight / 60;
+  // Model mechanics
+  const f = Math.max(0, p / 100);
+  const tqHombro = f;
+  const tqCodo = 1 - Math.sin(Math.PI * f) * 0.7;
   
-  const pectoralTension = Math.round(Math.min(100, Math.max(5, (10 + 90 * (progress / 100)) * loadFactor)));
-  const tricepsTension = Math.round(Math.min(100, Math.max(5, (100 - 65 * (progress / 100)) * loadFactor)));
-  const deltoidTension = Math.round(Math.min(100, Math.max(5, (10 + 85 * (progress / 100)) * loadFactor)));
+  // EMG values based on literature (Liss's design)
+  const pec = clamp(27 + tqHombro * 4 - 2, 20, 32);
+  const delt = clamp(26 + tqHombro * 3 - 1.5, 20, 30);
+  const tri = clamp(13 + tqCodo * 7, 13, 20);
+
+  // Joint Angles
+  const hx = Ex - S.x;
+  const hy = Ey - S.y;
+  const hl = Math.hypot(hx, hy) || 1;
   
+  const aCodo = Math.round(Math.acos(clamp(((S.x - Ex) * (Wx - Ex) + (S.y - Ey) * (Wy - Ey)) / ((Math.hypot(S.x - Ex, S.y - Ey) || 1) * (Math.hypot(Wx - Ex, Wy - Ey) || 1)), -1, 1)) * 180 / Math.PI);
+  const aHom = Math.round(Math.acos(clamp(-hx / hl, -1, 1)) * 180 / Math.PI);
+
   return {
-    jointPositions: { shoulder, elbow, wrist, barbell },
-    shoulderAngle,
-    elbowAngle,
-    shoulderMomentArm,
-    elbowMomentArm,
-    pectoralTension,
-    tricepsTension,
-    deltoidTension,
-    barbellForce,
-    shoulderTorque,
-    elbowTorque,
+    jointPositions: { 
+      shoulder: S, 
+      elbow: { x: Ex, y: Ey }, 
+      wrist: { x: Wx, y: Wy }, 
+      barbell: { x: Wx, y: Wy } 
+    },
+    shoulderAngle: aHom,
+    elbowAngle: aCodo,
+    tqHombro,
+    tqCodo,
+    pec,
+    delt,
+    tri
   };
-}
-
-/**
- * Interpolates HSL colors between blue (rest, 0% tension) and red (effort, 100% tension)
- * @param tension 0 to 100
- */
-export function getMuscleColor(tension: number): string {
-  const t = tension / 100;
-  // HSL values:
-  // Blue (rest): hue = 220, sat = 80%, light = 60%
-  // Red (effort): hue = 0, sat = 85%, light = 50%
-  const hue = 220 - 220 * t;
-  const sat = 80 + 5 * t;
-  const light = 60 - 10 * t;
-  return `hsl(${hue}, ${sat}%, ${light}%)`;
 }

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axis — v0.4 · Vista lateral realista (Roles Musculares)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body,html{margin:0;padding:0;height:100%;overflow:hidden;background:#0a0a0a}
+  .no-select{user-select:none;-webkit-user-select:none}
+  ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#111}
+  ::-webkit-scrollbar-thumb{background:#333;border-radius:4px}
+  .tab{transition:all .15s}
+  .tab-off{background:#151515;color:#666;border-color:#262626}
+  .tab-on{background:#00e5ff10;color:#00e5ff;border-color:#00e5ff}
+</style>
+</head>
+<body class="flex flex-col w-full h-full font-sans p-4 box-border text-gray-200 no-select">
+
+  <header class="mb-3 flex-shrink-0 flex items-end justify-between">
+    <div>
+      <h2 class="text-2xl font-bold text-white tracking-wide">Laboratorio Biomecánico Axis
+        <span class="text-xs font-mono text-[#00e5ff] align-middle ml-2 border border-[#00e5ff]/40 rounded px-2 py-0.5">v0.4 · LATERAL REALISTA</span>
+      </h2>
+      <div class="text-xs text-gray-500 uppercase tracking-widest mt-1">Press de banca · roles musculares, unrack y piernas</div>
+    </div>
+    <div class="flex gap-2">
+      <button id="tabLateral" class="tab tab-on text-xs font-semibold uppercase tracking-wide border rounded-lg px-4 py-2">Vista lateral · sagital</button>
+      <button id="tabSupina" class="tab tab-off text-xs font-semibold uppercase tracking-wide border rounded-lg px-4 py-2">Vista supina · oblicua 3/4</button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 gap-4 min-h-0">
+
+    <div class="flex-1 relative flex items-center justify-center bg-[#111] rounded-xl border border-neutral-800 overflow-hidden shadow-2xl">
+
+      <svg id="svgLateral" class="w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1f1f1f" stroke-width="1" stroke-dasharray="4,4"/>
+          </pattern>
+          <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#5a4a44"/><stop offset="1" stop-color="#3a2f2c"/>
+          </linearGradient>
+          <linearGradient id="boneGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#efe7d4"/><stop offset="1" stop-color="#c9bda2"/>
+          </linearGradient>
+          <filter id="soft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#grid)"/>
+
+        <g id="powerRack" opacity="0.95">
+          <rect x="140" y="540" width="120" height="11" fill="#121212" stroke="#222" stroke-width="2" rx="2"/>
+          <rect x="180" y="80" width="28" height="462" fill="#151515" stroke="#222" stroke-width="2"/>
+          <rect x="198" y="82" width="4" height="458" fill="#1f1f1f"/>
+          <g fill="#080808">
+            <circle cx="194" cy="110" r="3.5"/><circle cx="194" cy="130" r="3.5"/><circle cx="194" cy="150" r="3.5"/>
+            <circle cx="194" cy="170" r="3.5"/><circle cx="194" cy="190" r="3.5"/><circle cx="194" cy="210" r="3.5"/>
+            <circle cx="194" cy="230" r="3.5"/><circle cx="194" cy="250" r="3.5"/><circle cx="194" cy="270" r="3.5"/>
+            <circle cx="194" cy="290" r="3.5"/><circle cx="194" cy="310" r="3.5"/><circle cx="194" cy="330" r="3.5"/>
+            <circle cx="194" cy="350" r="3.5"/><circle cx="194" cy="370" r="3.5"/><circle cx="194" cy="390" r="3.5"/>
+            <circle cx="194" cy="410" r="3.5"/><circle cx="194" cy="430" r="3.5"/><circle cx="194" cy="450" r="3.5"/>
+          </g>
+          <path d="M 180 320 L 380 320 L 380 336 L 180 336 Z" fill="#151515" stroke="#262626" stroke-width="2"/>
+          <rect x="208" y="318" width="168" height="4" fill="#050505"/>
+          <path d="M 180 125 L 200 125 L 200 187 L 246 187 L 246 160 L 256 160 L 256 197 L 180 197 Z" fill="#151515" stroke="#262626" stroke-width="2"/>
+          <path d="M 198 125 L 202 125 L 202 185 L 244 185 L 244 160 L 248 160 L 248 189 L 198 189 Z" fill="#050505"/>
+        </g>
+
+        <rect x="90" y="392" width="440" height="15" fill="#1c1c1c" rx="5" stroke="#2a2a2a" stroke-width="2"/>
+        <rect x="150" y="407" width="30" height="140" fill="#151515"/>
+        <rect x="450" y="407" width="30" height="140" fill="#151515"/>
+        <rect x="120" y="542" width="400" height="9" fill="#1a1a1a" rx="3"/>
+
+        <path d="M188,356 Q214,322 262,332 Q332,340 402,350 Q452,356 470,365 Q530,375 540,460 Q540,500 520,530 L540,535 L540,542 L485,542 L490,530 Q490,490 510,460 Q470,410 460,392 Q402,399 300,397 Q222,397 188,388 Z" fill="url(#skin)" opacity=".55" stroke="#2a211e" stroke-width="1.5"/>
+        <path d="M175,356 Q168,326 142,330 Q118,336 122,360 Q126,384 156,384 Q178,382 188,368 Z" fill="url(#skin)" opacity=".6" stroke="#2a211e" stroke-width="1.5"/>
+        
+        <g opacity=".8">
+          <path d="M262,338 Q300,352 300,384" fill="none" stroke="url(#boneGrad)" stroke-width="3" opacity=".55"/>
+          <path d="M288,340 Q326,354 326,386" fill="none" stroke="url(#boneGrad)" stroke-width="3" opacity=".55"/>
+          <path d="M316,344 Q352,358 352,388" fill="none" stroke="url(#boneGrad)" stroke-width="3" opacity=".55"/>
+          <path d="M344,347 Q378,360 378,388" fill="none" stroke="url(#boneGrad)" stroke-width="3" opacity=".55"/>
+          <line x1="252" y1="335" x2="300" y2="346" stroke="url(#boneGrad)" stroke-width="5" stroke-linecap="round"/>
+          <line id="clav" x1="248" y1="336" x2="270" y2="344" stroke="url(#boneGrad)" stroke-width="5" stroke-linecap="round"/>
+          <path d="M272,352 L300,360 L286,376 Z" fill="url(#boneGrad)" opacity=".5"/>
+          <path d="M440,366 Q462,368 466,384 L448,388 Q438,376 440,366 Z" fill="url(#boneGrad)" opacity=".45"/>
+          <line x1="455" y1="378" x2="525" y2="455" stroke="url(#boneGrad)" stroke-width="6" stroke-linecap="round" opacity=".55"/>
+          <line x1="525" y1="455" x2="505" y2="532" stroke="url(#boneGrad)" stroke-width="5" stroke-linecap="round" opacity=".55"/>
+          <line x1="505" y1="532" x2="528" y2="538" stroke="url(#boneGrad)" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+        </g>
+
+        <line id="humerus" stroke="url(#boneGrad)" stroke-width="7" stroke-linecap="round"/>
+        <line id="foreBone" stroke="url(#boneGrad)" stroke-width="6" stroke-linecap="round"/>
+        <path id="mTri" filter="url(#soft)" stroke="#00000030" stroke-width="1"/>
+        <path id="mPec" filter="url(#soft)" stroke="#00000030" stroke-width="1"/>
+        <ellipse id="mDelt" filter="url(#soft)" stroke="#00000030" stroke-width="1"/>
+        <path id="mTriHi" fill="#ffffff" opacity=".10"/>
+        <path id="mPecHi" fill="#ffffff" opacity=".10"/>
+
+        <line id="gravLine" y1="0" y2="600" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="5,5" opacity=".5"/>
+        <g id="maBracket" stroke="#3b82f6" stroke-width="2" opacity=".75">
+          <line id="maH" /><line id="maT1"/><line id="maT2"/>
+        </g>
+        <text id="maLbl" fill="#60a5fa" font-size="11" font-family="monospace" text-anchor="middle" opacity=".85">brazo de momento</text>
+
+        <g id="grupoBarra">
+          <circle r="66" fill="rgba(37,99,235,.16)" stroke="#3b82f6" stroke-width="6"/>
+          <circle r="49" fill="none" stroke="#2563eb" stroke-width="2" opacity=".5"/>
+          <circle r="22" fill="#1a1a1a" stroke="#555" stroke-width="3"/>
+          <circle r="7" fill="#e0e0e0"/>
+        </g>
+
+        <circle id="nShoulder" cx="255" cy="352" r="7" fill="#111" stroke="#fff" stroke-width="2" opacity=".9"/>
+        <circle id="nElbow" r="6" fill="#111" stroke="#fff" stroke-width="2"/>
+        <circle id="nWrist" r="5" fill="#111" stroke="#00e5ff" stroke-width="2"/>
+        <text id="txtElbowAng" fill="#00e5ff" font-size="12" font-family="monospace" font-weight="bold" text-anchor="start"></text>
+        <text id="txtShoulderAng" fill="#00e5ff" font-size="12" font-family="monospace" font-weight="bold" text-anchor="middle"></text>
+        <text id="lblPec" fill="#e8e8e8" font-size="12" font-weight="bold" text-anchor="end">Pectoral mayor</text>
+        <text id="lblDelt" fill="#e8e8e8" font-size="12" font-weight="bold" text-anchor="middle">Deltoides ant.</text>
+        <text id="lblTri" fill="#e8e8e8" font-size="12" font-weight="bold" text-anchor="start">Tríceps</text>
+
+        <g transform="translate(30,548)">
+          <text x="0" y="-6" fill="#777" font-size="10" font-family="monospace">COLOR DEL CUERPO = DEMANDA / CONTRIBUCIÓN RELATIVA</text>
+          <rect x="0" y="0" width="150" height="8" rx="2" fill="url(#legendGrad)"/>
+          <text x="0" y="22" fill="#666" font-size="9" font-family="monospace">menor</text>
+          <text x="150" y="22" fill="#666" font-size="9" font-family="monospace" text-anchor="end">mayor</text>
+        </g>
+        <linearGradient id="legendGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="rgb(43,108,176)"/><stop offset=".5" stop-color="rgb(224,165,46)"/><stop offset="1" stop-color="rgb(224,72,58)"/>
+        </linearGradient>
+      </svg>
+
+      <div id="viewSupina" class="hidden absolute inset-0 flex flex-col items-center justify-center text-center px-8">
+        <div class="text-[#00e5ff] font-mono text-sm tracking-widest mb-3">VISTA SUPINA · OBLICUA 3/4</div>
+        <div class="text-gray-400 max-w-md leading-relaxed text-sm">Siguiente paso. Una vez que apruebes el estilo anatómico de la vista lateral, replico este mismo lenguaje (huesos + músculos + color por demanda) en la perspectiva oblicua 3/4 —la de la lámina y el video— donde se ve el recorrido vertical de la barra.</div>
+      </div>
+    </div>
+
+    <div class="w-80 flex flex-col gap-3 overflow-y-auto pr-2 pb-2">
+      
+      <div class="bg-[#121212] p-4 rounded-xl border border-neutral-800 flex-shrink-0">
+        <h3 class="text-xs text-gray-400 uppercase tracking-wider mb-3 border-b border-neutral-800 pb-2">Goniometría</h3>
+        <div class="flex flex-col gap-2">
+          <div class="flex justify-between items-center bg-[#1a1a1a] p-2.5 rounded-lg border-l-4 border-[#00e5ff]"><span class="text-sm text-gray-300">Ángulo codo</span><span id="pAngCodo" class="text-base font-mono font-bold text-[#00e5ff]">–</span></div>
+          <div class="flex justify-between items-center bg-[#1a1a1a] p-2.5 rounded-lg border-l-4 border-[#00e5ff]"><span class="text-sm text-gray-300">Ángulo hombro</span><span id="pAngHombro" class="text-base font-mono font-bold text-[#00e5ff]">–</span></div>
+        </div>
+      </div>
+
+      <div class="bg-[#121212] p-4 rounded-xl border border-neutral-800 flex-shrink-0">
+        <h3 class="text-xs text-gray-400 uppercase tracking-wider mb-1 border-b border-neutral-800 pb-2">Demanda mecánica <span class="text-[#3b82f6] normal-case">· varía por rango</span></h3>
+        <p class="text-[10px] text-gray-500 mb-2 leading-tight">Brazo de momento del peso. Es lo que impulsa el color del cuerpo.</p>
+        <div class="flex flex-col gap-2">
+          <div class="bg-[#1a1a1a] p-2.5 rounded-lg"><div class="flex justify-between text-sm mb-1"><span class="text-gray-300">Torque hombro</span><span id="pTqHombro" class="font-mono font-bold text-[#3b82f6]">0%</span></div><div class="h-1.5 bg-[#0a0a0a] rounded"><div id="barTqHombro" class="h-full bg-[#3b82f6] rounded" style="width:0%"></div></div></div>
+          <div class="bg-[#1a1a1a] p-2.5 rounded-lg"><div class="flex justify-between text-sm mb-1"><span class="text-gray-300">Torque codo</span><span id="pTqCodo" class="font-mono font-bold text-[#3b82f6]">0%</span></div><div class="h-1.5 bg-[#0a0a0a] rounded"><div id="barTqCodo" class="h-full bg-[#3b82f6] rounded" style="width:0%"></div></div></div>
+        </div>
+      </div>
+
+      <div class="bg-[#121212] p-4 rounded-xl border border-neutral-800 flex-1">
+        <h3 class="text-xs text-gray-400 uppercase tracking-wider mb-1 border-b border-neutral-800 pb-2">Activación EMG & Roles</h3>
+        <p class="text-[10px] text-gray-500 mb-2 leading-tight">%MVIC, banco plano ~60% 1RM. Rol fisiológico en las fases.</p>
+        <div class="flex flex-col gap-2.5">
+          
+          <div id="cardPec" class="p-2.5 rounded-lg bg-[#1a1a1a] border-l-4">
+            <div class="flex justify-between items-center"><span id="pLblPec" class="text-sm font-bold uppercase tracking-wide">Pectoral mayor</span><span id="pctPec" class="text-base font-mono font-bold">–</span></div>
+            <div class="text-[10px] text-gray-400 mt-1 leading-tight"><span class="text-gray-300 font-semibold">Agonista (Motor principal):</span><br/>Excéntrica (frena) / Concéntrica (empuja).</div>
+            <div class="h-1.5 bg-[#0a0a0a] rounded mt-2"><div id="barPec" class="h-full rounded" style="width:0%"></div></div>
+          </div>
+          
+          <div id="cardDelt" class="p-2.5 rounded-lg bg-[#1a1a1a] border-l-4">
+            <div class="flex justify-between items-center"><span id="pLblDelt" class="text-sm font-bold uppercase tracking-wide">Deltoides ant.</span><span id="pctDelt" class="text-base font-mono font-bold">–</span></div>
+            <div class="text-[10px] text-gray-400 mt-1 leading-tight"><span class="text-gray-300 font-semibold">Facilitador (Sinergista):</span><br/>Estabiliza el húmero en ambas fases.</div>
+            <div class="h-1.5 bg-[#0a0a0a] rounded mt-2"><div id="barDelt" class="h-full rounded" style="width:0%"></div></div>
+          </div>
+          
+          <div id="cardTri" class="p-2.5 rounded-lg bg-[#1a1a1a] border-l-4">
+            <div class="flex justify-between items-center"><span id="pLblTri" class="text-sm font-bold uppercase tracking-wide">Tríceps braquial</span><span id="pctTri" class="text-base font-mono font-bold">–</span></div>
+            <div class="text-[10px] text-gray-400 mt-1 leading-tight"><span class="text-gray-300 font-semibold">Facilitador / Secundario:</span><br/>Concéntrica fuerte para el bloqueo (Lockout).</div>
+            <div class="h-1.5 bg-[#0a0a0a] rounded mt-2"><div id="barTri" class="h-full rounded" style="width:0%"></div></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-3 flex-shrink-0 bg-[#121212] p-4 rounded-xl border border-neutral-800">
+    <div class="flex justify-between mb-2">
+      <span id="txtEstado" class="text-sm text-gray-300">Recorrido</span>
+      <span id="pProg" class="text-sm font-mono font-bold text-[#ef5350]">-30%</span>
+    </div>
+    <input type="range" id="slider" min="-30" max="100" value="-30" class="w-full cursor-pointer accent-[#ef5350]">
+  </div>
+
+<script>
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const lerpA=(a,b,t)=>a.map((v,i)=>Math.round(lerp(v,b[i],t)));
+const rgb=a=>`rgb(${a[0]},${a[1]},${a[2]})`;
+function scale3(t){t=clamp(t,0,1);const A=[43,108,176],B=[224,165,46],C=[224,72,58];return rgb(t<.5?lerpA(A,B,t/.5):lerpA(B,C,(t-.5)/.5));}
+
+const S={x:255,y:352}, L_ARM=112, L_FORE=98;
+
+function model(p){
+  const f = Math.max(0, p/100);
+  const tqHombro = f;
+  const tqCodo = 1 - Math.sin(Math.PI * f) * 0.7;
+  // Valores estables de EMG basados en literatura
+  const pec = clamp(27 + tqHombro * 4 - 2, 20, 32);
+  const delt = clamp(26 + tqHombro * 3 - 1.5, 20, 30);
+  const tri = clamp(13 + tqCodo * 7, 13, 20);
+  return {tqHombro,tqCodo,pec,delt,tri};
+}
+
+function render(p){
+  const m=model(p);
+  
+  let Wx, Wy, Ex, Ey;
+
+  // CINEMÁTICA EN DOS FASES (Unrack vs Descenso)
+  if (p < 0) {
+      if (p < -15) {
+          // Fase 1: Despegar hacia arriba desde el soporte
+          let t = (p + 30) / 15;
+          Wx = 220;
+          Wy = lerp(165, 148, t);
+      } else {
+          // Fase 2: Jalar horizontal al Lockout
+          let t = (p + 15) / 15; 
+          Wx = lerp(220, 280.7, t);
+          Wy = lerp(148, 145, t);
+      }
+      let dist = Math.hypot(Wx - S.x, Wy - S.y);
+      dist = clamp(dist, 0.1, L_ARM + L_FORE - 0.1);
+      let a1 = Math.acos((L_ARM**2 + dist**2 - L_FORE**2) / (2 * L_ARM * dist));
+      let angBar = Math.atan2(Wy - S.y, Wx - S.x);
+      Ex = S.x + L_ARM * Math.cos(angBar + a1);
+      Ey = S.y + L_ARM * Math.sin(angBar + a1);
+  } else {
+      // Fase 3: Descenso (J-Curve)
+      let fase = p / 100;
+      Wy = 145 + 175 * fase;
+      Ey = Wy + L_FORE;
+      let dy = Ey - S.y;
+      Ex = S.x + Math.sqrt(Math.max(0, L_ARM**2 - dy**2));
+      Wx = Ex;
+  }
+
+  // Ejes del húmero para posicionar músculos
+  const hx=Ex-S.x, hy=Ey-S.y, hl=Math.hypot(hx,hy)||1;
+  const ux=hx/hl, uy=hy/hl;            
+  const pnx=uy, pny=-ux;               
+  const bnx=-uy, bny=ux;               
+
+  const dPec=0.22+0.78*Math.max(0,p/100), dDelt=0.22+0.78*Math.max(0,p/100), dTri=clamp(0.30+0.70*(1-Math.max(0,p/100)),0.22,1);
+  const cPec=scale3(dPec), cDelt=scale3(dDelt), cTri=scale3(dTri);
+
+  $('humerus').setAttribute('x1',S.x);$('humerus').setAttribute('y1',S.y);$('humerus').setAttribute('x2',Ex);$('humerus').setAttribute('y2',Ey);
+  $('foreBone').setAttribute('x1',Ex);$('foreBone').setAttribute('y1',Ey);$('foreBone').setAttribute('x2',Wx);$('foreBone').setAttribute('y2',Wy);
+
+  // Tríceps
+  const ta={x:S.x+bnx*9,y:S.y+bny*9}, tb={x:Ex+bnx*7,y:Ey+bny*7};
+  const tm={x:(ta.x+tb.x)/2+bnx*11,y:(ta.y+tb.y)/2+bny*11};
+  const ti={x:(ta.x+tb.x)/2+bnx*1,y:(ta.y+tb.y)/2+bny*1};
+  $('mTri').setAttribute('d',`M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y} Q${ti.x},${ti.y} ${ta.x},${ta.y} Z`);
+  $('mTri').setAttribute('fill',cTri);
+  $('mTriHi').setAttribute('d',`M${ta.x},${ta.y} Q${tm.x},${tm.y} ${tb.x},${tb.y}`);
+  $('mTriHi').setAttribute('fill','none');$('mTriHi').setAttribute('stroke','#fff');$('mTriHi').setAttribute('stroke-width','2');$('mTriHi').setAttribute('opacity','.12');
+
+  // Deltoides
+  const dcx=S.x+ux*4+pnx*3, dcy=S.y+uy*4+pny*3;
+  $('mDelt').setAttribute('cx',dcx);$('mDelt').setAttribute('cy',dcy);
+  $('mDelt').setAttribute('rx',18);$('mDelt').setAttribute('ry',15);
+  $('mDelt').setAttribute('transform',`rotate(${Math.atan2(uy,ux)*180/Math.PI} ${dcx} ${dcy})`);
+  $('mDelt').setAttribute('fill',cDelt);
+
+  // Pectoral
+  const c1={x:236,y:334}, c2={x:250,y:362};
+  const ins={x:S.x+ux*24+pnx*5,y:S.y+uy*24+pny*5};
+  $('mPec').setAttribute('d',`M${c1.x},${c1.y} Q${(c1.x+ins.x)/2-6},${(c1.y+ins.y)/2-8} ${ins.x},${ins.y} Q${(c2.x+ins.x)/2},${(c2.y+ins.y)/2+4} ${c2.x},${c2.y} Q${(c1.x+c2.x)/2-4},${(c1.y+c2.y)/2} ${c1.x},${c1.y} Z`);
+  $('mPec').setAttribute('fill',cPec);
+  $('mPecHi').setAttribute('d',`M${c1.x},${c1.y} Q${(c1.x+ins.x)/2-6},${(c1.y+ins.y)/2-8} ${ins.x},${ins.y}`);
+  $('mPecHi').setAttribute('fill','none');$('mPecHi').setAttribute('stroke','#fff');$('mPecHi').setAttribute('stroke-width','2');$('mPecHi').setAttribute('opacity','.12');
+
+  // Overlays
+  $('gravLine').setAttribute('x1',Wx);$('gravLine').setAttribute('x2',Wx);
+  $('maH').setAttribute('x1',S.x);$('maH').setAttribute('y1',352);$('maH').setAttribute('x2',Wx);$('maH').setAttribute('y2',352);
+  $('maT1').setAttribute('x1',S.x);$('maT1').setAttribute('y1',346);$('maT1').setAttribute('x2',S.x);$('maT1').setAttribute('y2',358);
+  $('maT2').setAttribute('x1',Wx);$('maT2').setAttribute('y1',346);$('maT2').setAttribute('x2',Wx);$('maT2').setAttribute('y2',358);
+  $('maLbl').setAttribute('x',(S.x+Wx)/2);$('maLbl').setAttribute('y',372);
+  $('maLbl').setAttribute('opacity', Math.abs(Wx-S.x)>34?'.85':'0');
+
+  $('grupoBarra').setAttribute('transform',`translate(${Wx},${Wy})`);
+
+  $('nElbow').setAttribute('cx',Ex);$('nElbow').setAttribute('cy',Ey);
+  $('nWrist').setAttribute('cx',Wx);$('nWrist').setAttribute('cy',Wy);
+  $('lblPec').setAttribute('x',c1.x-8);$('lblPec').setAttribute('y',c1.y+2);
+  $('lblDelt').setAttribute('x',dcx);$('lblDelt').setAttribute('y',dcy-22);
+  $('lblTri').setAttribute('x',tm.x+bnx*6+8);$('lblTri').setAttribute('y',tm.y+bny*6);
+
+  const aCodo=Math.round(Math.acos(clamp(((S.x-Ex)*(Wx-Ex)+(S.y-Ey)*(Wy-Ey))/((Math.hypot(S.x-Ex,S.y-Ey)||1)*(Math.hypot(Wx-Ex,Wy-Ey)||1)),-1,1))*180/Math.PI);
+  const aHom=Math.round(Math.acos(clamp(-hx/hl,-1,1))*180/Math.PI);
+  $('txtElbowAng').setAttribute('x',Ex+14);$('txtElbowAng').setAttribute('y',Ey+4);$('txtElbowAng').textContent=aCodo+'°';
+  $('txtShoulderAng').setAttribute('x',S.x);$('txtShoulderAng').setAttribute('y',S.y-14);$('txtShoulderAng').textContent=aHom+'°';
+
+  // Panel Data
+  $('pAngCodo').textContent=aCodo+'°';$('pAngHombro').textContent=aHom+'°';
+  $('pTqHombro').textContent=Math.round(m.tqHombro*100)+'%';$('barTqHombro').style.width=(m.tqHombro*100)+'%';
+  $('pTqCodo').textContent=Math.round(m.tqCodo*100)+'%';$('barTqCodo').style.width=(m.tqCodo*100)+'%';
+  
+  const ePec=scale3((m.pec-20)/12), eDelt=scale3((m.delt-20)/10), eTri=scale3((m.tri-13)/7);
+  $('pctPec').textContent=Math.round(m.pec)+'%';$('pctPec').style.color=ePec;$('pLblPec').style.color=ePec;$('cardPec').style.borderLeftColor=ePec;$('barPec').style.width=(m.pec/32*100)+'%';$('barPec').style.background=ePec;
+  $('pctDelt').textContent=Math.round(m.delt)+'%';$('pctDelt').style.color=eDelt;$('pLblDelt').style.color=eDelt;$('cardDelt').style.borderLeftColor=eDelt;$('barDelt').style.width=(m.delt/32*100)+'%';$('barDelt').style.background=eDelt;
+  $('pctTri').textContent=Math.round(m.tri)+'%';$('pctTri').style.color=eTri;$('pLblTri').style.color=eTri;$('cardTri').style.borderLeftColor=eTri;$('barTri').style.width=(m.tri/32*100)+'%';$('barTri').style.background=eTri;
+}
+
+function update(){
+    const f=parseInt($('slider').value,10);
+    
+    let textoFase = "";
+    if(f === -30) textoFase = "Soporte (Racked)";
+    else if (f < 0) textoFase = "Unrack (Fase Concéntrica)";
+    else if (f === 0) textoFase = "Lockout (Inicio Excéntrica)";
+    else textoFase = `Descenso Excéntrico (${f}%)`;
+    
+    $('txtEstado').textContent = "Fase actual: " + textoFase;
+    $('pProg').textContent = f < 0 ? f + "%" : "+" + f + "%";
+    
+    render(f);
+}
+function setVista(v){
+  const lat=v==='lateral';
+  $('svgLateral').classList.toggle('hidden',!lat);
+  $('viewSupina').classList.toggle('hidden',lat);
+  $('tabLateral').className='tab '+(lat?'tab-on':'tab-off')+' text-xs font-semibold uppercase tracking-wide border rounded-lg px-4 py-2';
+  $('tabSupina').className='tab '+(!lat?'tab-on':'tab-off')+' text-xs font-semibold uppercase tracking-wide border rounded-lg px-4 py-2';
+}
+$('slider').addEventListener('input',update);
+$('tabLateral').addEventListener('click',()=>setVista('lateral'));
+$('tabSupina').addEventListener('click',()=>setVista('supina'));
+update();
+</script>
+</body>
+</html>
